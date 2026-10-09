@@ -107,8 +107,6 @@ function finishTitle(save: boolean) {
         >
             <i class="dot" />
         </span>
-
-        <span v-if="selected && def" class="resize" data-resize="se" />
     </div>
 </template>
 
@@ -207,8 +205,7 @@ function finishTitle(save: boolean) {
 
 .node.container .bar,
 .node.container .pin,
-.node.container .edge,
-.node.container .resize {
+.node.container .edge {
     pointer-events: auto;
 }
 
@@ -348,27 +345,6 @@ function finishTitle(save: boolean) {
 /* Пины всех нод видны, пока тянется связь. */
 :global(.canvas.connecting) .dot {
     opacity: 1;
-}
-
-.resize {
-    position: absolute;
-    right: -2px;
-    bottom: -2px;
-    width: 16px;
-    height: 16px;
-    cursor: nwse-resize;
-    background: linear-gradient(
-        135deg,
-        transparent 50%,
-        var(--tao-color-accent, #f59e0b) 50%,
-        var(--tao-color-accent, #f59e0b) 58%,
-        transparent 58%,
-        transparent 70%,
-        var(--tao-color-accent, #f59e0b) 70%,
-        var(--tao-color-accent, #f59e0b) 78%,
-        transparent 78%
-    );
-    border-bottom-right-radius: 8px;
 }
 
 /* Нода-точка */
