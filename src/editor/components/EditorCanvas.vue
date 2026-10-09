@@ -44,6 +44,8 @@ const pinch = new PinchTracker();
  * Выделяем, когда палец пошёл тянуть (вышел за допуск) или поднят (тап, удержание).
  */
 let armed: string | null = null;
+/** Связь, на которую лёг палец: как с нодой, выбираем её только если это тап (палец не пошёл двигать холст). */
+let armedConn: string | null = null;
 
 /** `?debug=touch`: в углу видно последний распознанный жест и число пальцев. */
 const debug = typeof location !== 'undefined' && new URLSearchParams(location.search).get('debug') === 'touch';
@@ -192,6 +194,7 @@ function touchDown(e: PointerEvent): boolean {
     if (e.isPrimary) {
         touches.clear();
         armed = null;
+        armedConn = null;
         if (mode !== 'idle') abortGesture();
     }
 
@@ -272,12 +275,24 @@ function touchUp(e: PointerEvent): boolean {
     lastTouchAt = Date.now();
     const result = taps.up(sampleOf(e));
     commitArmed(); // тап или удержание без сдвига
+    const onLine = armedConn !== null; // палец лёг на связь (тап по ней не «пустое место»)
+    if (armedConn) {
+        const id = armedConn;
+        armedConn = null;
+        if (!taps.isMoved) {
+            editor.setSelection([]);
+            editor.selectConnection(id);
+        }
+    }
     if (result === 'double') {
         activateAt(e);
         note('двойной тап');
     } else if (result === 'tap') {
         // Тап по пустому месту снимает выделение (мы не трогали его при касании: палец мог пойти двигать холст).
-        if (mode === 'pan') editor.setSelection([]);
+        if (mode === 'pan' && !onLine) {
+            editor.setSelection([]);
+            editor.selectConnection(null);
+        }
         note('тап');
     }
     return false;
@@ -351,12 +366,21 @@ function onPointerDown(e: PointerEvent) {
 
         const connId = connIdAt(e.target);
         if (connId) {
+            if (touch) {
+                // Линия тонкая, и палец на ней чаще начинает двигать холст, чем выбирать связь: ведём себя как на пустом месте.
+                armedConn = connId;
+                mode = editor.selectMode ? 'idle' : 'pan';
+                e.preventDefault();
+                capture(e);
+                return;
+            }
             editor.setSelection([]);
             editor.selectConnection(connId);
             e.preventDefault();
             return;
         }
-        if (!(touch && id)) editor.selectConnection(null);
+        // На сенсоре выбор связи снимаем позже (тап по пустому месту или начало рамки), а не при касании.
+        if (!touch) editor.selectConnection(null);
 
         const pin = pinAt(e.target);
         // На сенсоре Ctrl нет: его роль играет режим «Выделение» в тулбаре.
@@ -393,6 +417,7 @@ function onPointerDown(e: PointerEvent) {
             mode = 'pan';
             note('холст');
         } else {
+            if (touch) editor.selectConnection(null);
             baseSelection = additive ? [...editor.selection] : [];
             editor.setSelection(baseSelection);
             marquee.value = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
@@ -416,6 +441,7 @@ function abortGesture() {
     clearLongPress();
     taps.cancel();
     armed = null;
+    armedConn = null;
     if (mode === 'connect') {
         editor.cancelConnect();
     } else if (mode === 'drag' || mode === 'resize') {
