@@ -233,3 +233,35 @@ describe('точка на связи', () => {
         expect(editor.pending!.target!.side).toBe('left'); // источник строго слева от точки
     });
 });
+
+describe('подъём ноды', () => {
+    beforeEach(() => setActivePinia(createPinia()));
+
+    function scene() {
+        const editor = useEditor();
+        editor.loadWorkspace({ nodes: {}, connections: [] }, undefined, true);
+        const g = editor.addNodeAtCenter('group').id;
+        const a = editor.addNodeAtCenter('note').id;
+        const b = editor.addNodeAtCenter('note').id;
+        return { editor, g, a, b };
+    }
+
+    it('нода поднимается наверх, группа остаётся подложкой', () => {
+        const { editor, g, a, b } = scene();
+        editor.raise(a);
+        expect(Object.keys(editor.workspace.nodes).at(-1)).toBe(a);
+
+        editor.raise(g); // контейнер не поднимается
+        expect(Object.keys(editor.workspace.nodes).at(-1)).toBe(a);
+        expect(Object.keys(editor.workspace.nodes)).toEqual([g, b, a]);
+    });
+
+    it('подъём не пишется в историю: «будущее» после undo остаётся доступным', () => {
+        const { editor, a } = scene();
+        editor.undo(); // убрали последнюю ноду, redo доступно
+        expect(editor.canRedo).toBe(true);
+
+        editor.raise(a);
+        expect(editor.canRedo).toBe(true);
+    });
+});

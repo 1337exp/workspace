@@ -154,6 +154,7 @@ function onPointerDown(e: PointerEvent) {
 
         // Поле ввода внутри ноды: выделяем ноду и отдаём событие полю (фокус, каретка, выделение текста).
         if (id && isEditable(e.target)) {
+            editor.raise(id);
             editor.selectConnection(null);
             if (!editor.selection.has(id)) editor.setSelection([id]);
             return;
@@ -172,6 +173,7 @@ function onPointerDown(e: PointerEvent) {
 
         const pin = pinAt(e.target);
         const additive = e.ctrlKey || e.shiftKey;
+        if (id) editor.raise(id);
 
         if (pin) {
             editor.startConnect(pin, cursorWorld(e));

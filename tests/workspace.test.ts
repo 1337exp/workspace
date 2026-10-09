@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { defineNode } from '@/core/define';
 import { Registry } from '@/core/registry';
 import { parse, serialize } from '@/core/serialize';
-import { addNode, anchorPoint, carriedBy, dissolveNode, resizeRect, resolveLink, sideToward, splitConnection, canConnect, connect, createWorkspace, removeNode, reverseConnection, setArrow } from '@/core/workspace';
+import { addNode, anchorPoint, carriedBy, dissolveNode, raiseToFront, resizeRect, resolveLink, sideToward, splitConnection, canConnect, connect, createWorkspace, removeNode, reverseConnection, setArrow } from '@/core/workspace';
 import { createDefaultRegistry } from '@/nodes';
 
 const L = (node: string) => ({ node, side: 'left' as const });
@@ -308,5 +308,35 @@ describe('нода-точка (reroute)', () => {
         point.x = -300;
         point.y = 60;
         expect(resolveLink(ws, registry, toPoint)).toMatchObject({ bSide: 'right' });
+    });
+});
+
+describe('порядок отрисовки', () => {
+    const registry = createDefaultRegistry();
+
+    function three() {
+        const ws = createWorkspace();
+        for (const id of ['a', 'b', 'c']) addNode(ws, registry, 'note', { id });
+        return ws;
+    }
+
+    it('нода ложится в конец списка, остальные сохраняют порядок', () => {
+        const ws = three();
+        expect(raiseToFront(ws, 'a')).toBe(true);
+        expect(Object.keys(ws.nodes)).toEqual(['b', 'c', 'a']);
+    });
+
+    it('верхняя нода и несуществующая ничего не меняют', () => {
+        const ws = three();
+        expect(raiseToFront(ws, 'c')).toBe(false);
+        expect(raiseToFront(ws, 'zzz')).toBe(false);
+        expect(Object.keys(ws.nodes)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('порядок переживает сохранение и чтение', () => {
+        const ws = three();
+        raiseToFront(ws, 'a');
+        const result = parse(serialize(ws), registry);
+        expect(result.ok && Object.keys(result.workspace.nodes)).toEqual(['b', 'c', 'a']);
     });
 });

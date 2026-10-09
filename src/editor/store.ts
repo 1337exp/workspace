@@ -14,6 +14,7 @@ import {
     dissolveNode,
     fitAnchor,
     oppositeSide,
+    raiseToFront,
     removeNode,
     resizeRect,
     reverseConnection,
@@ -83,6 +84,15 @@ export const useEditor = defineStore('editor', () => {
         const next = new Set(ids);
         for (const id of [...selection]) if (!next.has(id)) selection.delete(id);
         for (const id of next) selection.add(id);
+    }
+
+    /**
+     * Нода, за которую взялись мышью, ложится поверх остальных. Группы остаются подложкой.
+     * В историю не пишется (иначе каждый клик был бы шагом Ctrl+Z): порядок сохранится с ближайшей правкой.
+     */
+    function raise(id: string) {
+        const type = workspace.value.nodes[id]?.type;
+        if (type !== undefined && !registry.find(type)?.container) raiseToFront(workspace.value, id);
     }
 
     function toggleSelected(id: string) {
@@ -449,6 +459,7 @@ export const useEditor = defineStore('editor', () => {
 
         setSelection,
         toggleSelected,
+        raise,
         selectConnection,
         beginDrag,
         endDrag,

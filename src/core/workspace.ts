@@ -236,3 +236,17 @@ export function dissolveNode(ws: Workspace, nodeId: string): void {
         }
     }
 }
+
+/**
+ * Поднимает ноду над остальными: порядок отрисовки задаёт порядок ключей, поэтому перекладываем её в конец.
+ * Возвращает false, если нода уже сверху или её нет (ничего не менялось).
+ */
+export function raiseToFront(ws: Workspace, nodeId: string): boolean {
+    const node = ws.nodes[nodeId];
+    const ids = Object.keys(ws.nodes);
+    if (!node || ids[ids.length - 1] === nodeId) return false;
+
+    delete ws.nodes[nodeId];
+    ws.nodes[nodeId] = node;
+    return true;
+}
