@@ -38,6 +38,12 @@ const taps = new TapRecognizer();
 let longPressTimer: ReturnType<typeof setTimeout> | undefined;
 let lastTouchAt = 0;
 const pinch = new PinchTracker();
+/**
+ * Нода, на которую лёг палец: её выделение и подъём откладываются, пока не ясно намерение. Касание ещё может
+ * оказаться началом жеста двумя пальцами, и тогда выделение, которое было у пользователя, не должно слететь.
+ * Выделяем, когда палец пошёл тянуть (вышел за допуск) или поднят (тап, удержание).
+ */
+let armed: string | null = null;
 
 /** `?debug=touch`: в углу видно последний распознанный жест и число пальцев. */
 const debug = typeof location !== 'undefined' && new URLSearchParams(location.search).get('debug') === 'touch';
@@ -185,6 +191,7 @@ function touchDown(e: PointerEvent): boolean {
     // следующий тап посчитается вторым пальцем и включит щипок насовсем.
     if (e.isPrimary) {
         touches.clear();
+        armed = null;
         if (mode !== 'idle') abortGesture();
     }
 
@@ -233,6 +240,19 @@ function purgeTouch(e: PointerEvent) {
     else rebasePinch();
 }
 
+/** Намерение стало ясно (палец пошёл тянуть или поднят): выделяем и поднимаем ноду, на которую он лёг. */
+function commitArmed() {
+    const id = armed;
+    armed = null;
+    if (!id || !editor.workspace.nodes[id]) return;
+
+    editor.selectConnection(null);
+    // Изменение размера выделяет только свою ноду; перетаскивание сохраняет выделение, если нода уже в нём.
+    if (mode === 'resize' || !editor.selection.has(id)) editor.setSelection([id]);
+    editor.raise(id);
+    if (mode === 'drag') editor.beginDrag();
+}
+
 /** Палец поднят. Возвращает true, если событие обработано целиком (идёт щипок). */
 function touchUp(e: PointerEvent): boolean {
     touches.delete(e.pointerId);
@@ -251,6 +271,7 @@ function touchUp(e: PointerEvent): boolean {
     clearLongPress();
     lastTouchAt = Date.now();
     const result = taps.up(sampleOf(e));
+    commitArmed(); // тап или удержание без сдвига
     if (result === 'double') {
         activateAt(e);
         note('двойной тап');
@@ -316,9 +337,13 @@ function onPointerDown(e: PointerEvent) {
 
         // Поле ввода внутри ноды: выделяем ноду и отдаём событие полю (фокус, каретка, выделение текста).
         if (id && isEditable(e.target)) {
-            editor.raise(id);
-            editor.selectConnection(null);
-            if (!editor.selection.has(id)) editor.setSelection([id]);
+            if (touch) {
+                armed = id; // выделим при отпускании: палец может оказаться началом жеста двумя пальцами
+            } else {
+                editor.raise(id);
+                editor.selectConnection(null);
+                if (!editor.selection.has(id)) editor.setSelection([id]);
+            }
             return;
         }
 
@@ -331,19 +356,20 @@ function onPointerDown(e: PointerEvent) {
             e.preventDefault();
             return;
         }
-        editor.selectConnection(null);
+        if (!(touch && id)) editor.selectConnection(null);
 
         const pin = pinAt(e.target);
         // На сенсоре Ctrl нет: его роль играет режим «Выделение» в тулбаре.
         const additive = e.ctrlKey || e.shiftKey || (touch && editor.selectMode);
-        if (id) editor.raise(id);
+        if (id && (!touch || additive)) editor.raise(id);
 
         if (pin) {
             editor.startConnect(pin, cursorWorld(e));
             mode = 'connect';
         } else if (id && (e.target as Element).closest('[data-resize]')) {
             const node = editor.workspace.nodes[id]!;
-            editor.setSelection([id]);
+            if (touch) armed = id;
+            else editor.setSelection([id]);
             resizeId = id;
             resizeEdge = (e.target as Element).closest<HTMLElement>('[data-resize]')!.dataset.resize as ResizeEdge;
             resizeStart = { x: node.x, y: node.y, w: node.w, h: node.h };
@@ -354,10 +380,13 @@ function onPointerDown(e: PointerEvent) {
             if (additive) {
                 editor.toggleSelected(id);
                 if (!editor.selection.has(id)) return;
-            } else if (!editor.selection.has(id)) {
-                editor.setSelection([id]);
+                editor.beginDrag();
+            } else if (touch) {
+                armed = id; // выделение и beginDrag: в commitArmed, когда палец пошёл тянуть
+            } else {
+                if (!editor.selection.has(id)) editor.setSelection([id]);
+                editor.beginDrag();
             }
-            editor.beginDrag();
             mode = 'drag';
         } else if (touch && !editor.selectMode && !doubleDown) {
             // Один палец по пустому месту двигает холст; выделение (если тап) снимется при отпускании.
@@ -386,6 +415,7 @@ function onPointerDown(e: PointerEvent) {
 function abortGesture() {
     clearLongPress();
     taps.cancel();
+    armed = null;
     if (mode === 'connect') {
         editor.cancelConnect();
     } else if (mode === 'drag' || mode === 'resize') {
@@ -492,6 +522,7 @@ function onPointerMove(e: PointerEvent) {
         if (taps.move(sampleOf(e))) clearLongPress();
         // Пока палец не вышел за допуск тапа, холст и ноды стоят: дрожание не должно двигать ни то, ни другое.
         if (!taps.isMoved && (mode === 'pan' || mode === 'drag' || mode === 'resize')) return;
+        if (armed && (mode === 'drag' || mode === 'resize')) commitArmed();
     } else if (mode !== 'idle' && e.buttons === 0) {
         // Кнопку отпустили где-то вне окна: событие мы не увидели, но по движению видно, что жест окончен.
         cancelGesture();
