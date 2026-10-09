@@ -1,0 +1,73 @@
+import type { Component } from 'vue';
+
+// Определение ноды (живёт в реестре) и экземпляры (чистые данные, сериализуются в JSON).
+
+export type NodeData = Record<string, unknown>;
+
+/**
+ * Компонент содержимого ноды получает props `data` и `selected`
+ * и сообщает об изменении событием `change` с частичным патчем данных.
+ */
+export interface NodeDef<D extends NodeData = NodeData> {
+    id: string;
+    title: string;
+    /** Размер новой ноды, мировые единицы. */
+    size: { w: number; h: number; minW?: number; minH?: number };
+    /** Версия формата `data`. Растёт, когда формат меняется; старые данные проходят через `migrate`. По умолчанию 1. */
+    version?: number;
+    /** Данные новой ноды. */
+    create(): D;
+    /** Приводит данные старой версии к текущей. Без неё старые данные просто дополняются значениями из `create()`. */
+    migrate?(data: NodeData, from: number): D;
+    /** Vue-компонент содержимого. */
+    component: Component;
+    /** Класс иконки из fontello, например `icon-pencil`. */
+    icon?: string;
+    /** Поле `data` с названием ноды: оно показывается в полосе вместо названия типа и правится двойным кликом по полосе. */
+    titleKey?: string;
+    /**
+     * Нода-контейнер (рамка, группа): лежит под связями и другими нодами, телом не перехватывает клики,
+     * а ноды, лежащие целиком внутри, едут вместе с ней при перетаскивании.
+     */
+    container?: boolean;
+}
+
+export type AnyNodeDef = NodeDef<any>;
+
+//--------------------------------------------------
+
+export interface NodeInstance {
+    id: string;
+    /** id определения в реестре. Если определения нет, нода остаётся заглушкой и сохраняется как есть. */
+    type: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    /** Версия формата `data`, с которой оно было записано. */
+    dataVersion: number;
+    data: NodeData;
+}
+
+export type Side = 'left' | 'right' | 'top' | 'bottom';
+
+/** Точка крепления связи: у каждой ноды по пину с каждой из четырёх сторон. */
+export interface Anchor {
+    node: string;
+    side: Side;
+}
+
+export type Arrow = 'none' | 'end';
+
+export interface Connection {
+    id: string;
+    from: Anchor;
+    to: Anchor;
+    /** `end`: стрелка на конце `to`. */
+    arrow: Arrow;
+}
+
+export interface Workspace {
+    nodes: Record<string, NodeInstance>;
+    connections: Connection[];
+}

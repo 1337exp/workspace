@@ -1,0 +1,22 @@
+html,
+body,
+#app {
+    height: 100%;
+    margin: 0;
+}
+
+/* Полоса прокрутки страницы скрыта: она отнимала 15-17 px ширины и «толкала» контент, когда появлялась
+   (и когда модалка блокирует прокрутку). Сама прокрутка работает: колесо, палец, клавиатура, кнопка «Наверх». */
+html {
+    scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    background: var(--tao-color-bg);
+    color: var(--tao-color-text);
+    font-family: var(--tao-font-family);
+}

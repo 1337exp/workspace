@@ -1,0 +1,11 @@
+node_modules
+dist
+*.local
+.DS_Store
+
+# старый код: нужен только как справка при переносе
+old-code
+
+# IDE и локальные настройки
+.idea
+.claude
