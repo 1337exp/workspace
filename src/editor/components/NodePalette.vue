@@ -17,6 +17,7 @@ const items = computed(() => {
     const q = query.value.trim().toLowerCase();
     return editor.registry
         .all()
+        .filter((def) => !def.point)
         .map((def) => ({ def, title: nodeTitle(def) }))
         .filter((item) => item.title.toLowerCase().includes(q) || item.def.id.includes(q));
 });

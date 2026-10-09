@@ -56,7 +56,7 @@ async function onFile(e: Event) {
 
         <span class="sep" />
 
-        <TaoButton v-for="def in editor.registry.all()" :key="def.id" variant="secondary" size="small" @click="editor.addNodeAtCenter(def.id)">
+        <TaoButton v-for="def in editor.registry.all().filter((d) => !d.point)" :key="def.id" variant="secondary" size="small" @click="editor.addNodeAtCenter(def.id)">
             <i v-if="def.icon" :class="def.icon" />{{ nodeTitle(def) }}
         </TaoButton>
 

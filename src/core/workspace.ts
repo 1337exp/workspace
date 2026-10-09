@@ -156,3 +156,83 @@ export function resizeRect(start: Rect, edge: ResizeEdge, dx: number, dy: number
     }
     return r;
 }
+
+//--------------------------------------------------
+// Ноды-точки (reroute)
+
+type Point = readonly [number, number];
+
+/** Сторона, в которую смотрит направление от `from` к `to`: по большей из осей. */
+export function sideToward(from: Point, to: Point): Side {
+    const dx = to[0] - from[0];
+    const dy = to[1] - from[1];
+    return Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'top' : 'bottom';
+}
+
+const isPoint = (ws: Workspace, registry: Registry, nodeId: string) => !!registry.find(ws.nodes[nodeId]?.type ?? '')?.point;
+const centerOf = (n: NodeInstance): Point => [n.x + n.w / 2, n.y + n.h / 2];
+
+/** Якорь, подогнанный под сторону, откуда идёт связь: у точки сторона всегда смотрит на `toward`, у обычной ноды якорь как есть. */
+export function fitAnchor(ws: Workspace, registry: Registry, anchor: Anchor, toward: Point): Anchor {
+    const node = ws.nodes[anchor.node];
+    if (!node || !isPoint(ws, registry, anchor.node)) return anchor;
+    return { node: anchor.node, side: sideToward(centerOf(node), toward) };
+}
+
+export interface ResolvedLink {
+    a: Point;
+    aSide: Side;
+    b: Point;
+    bSide: Side;
+}
+
+/**
+ * Концы связи для рисования. Сохранённая сторона у точки не важна: точку двигают, и линия
+ * должна подходить к ней с той стороны, где сейчас сосед.
+ */
+export function resolveLink(ws: Workspace, registry: Registry, c: Connection): ResolvedLink | null {
+    const from = ws.nodes[c.from.node];
+    const to = ws.nodes[c.to.node];
+    if (!from || !to) return null;
+
+    const fromEnd = anchorPoint(ws, c.from)!;
+    const toEnd = anchorPoint(ws, c.to)!;
+    const a = fitAnchor(ws, registry, c.from, isPoint(ws, registry, c.to.node) ? centerOf(to) : toEnd);
+    const b = fitAnchor(ws, registry, c.to, isPoint(ws, registry, c.from.node) ? centerOf(from) : fromEnd);
+    return { a: anchorPoint(ws, a)!, aSide: a.side, b: anchorPoint(ws, b)!, bSide: b.side };
+}
+
+/**
+ * Двойной клик по связи: в точке `at` встаёт нода-точка, связь делится на две.
+ * Стрелка остаётся на второй половине: она показывает направление всей цепочки.
+ */
+export function splitConnection(ws: Workspace, registry: Registry, connectionId: string, at: Point): NodeInstance | null {
+    const c = ws.connections.find((x) => x.id === connectionId);
+    const def = registry.all().find((d) => d.point);
+    const a = c && anchorPoint(ws, c.from);
+    const b = c && anchorPoint(ws, c.to);
+    if (!c || !def || !a || !b) return null;
+
+    const node = addNode(ws, registry, def.id, { x: at[0] - def.size.w / 2, y: at[1] - def.size.h / 2 });
+    disconnect(ws, c.id);
+    connect(ws, c.from, { node: node.id, side: sideToward(at, a) }, 'none');
+    connect(ws, { node: node.id, side: sideToward(at, b) }, c.to, c.arrow);
+    return node;
+}
+
+/**
+ * Удаляет ноду-точку, соединяя её соседей напрямую: каждый вход с каждым выходом.
+ * Стрелка сохраняется, если она была на любой из удалённых связей.
+ */
+export function dissolveNode(ws: Workspace, nodeId: string): void {
+    const incoming = ws.connections.filter((c) => c.to.node === nodeId);
+    const outgoing = ws.connections.filter((c) => c.from.node === nodeId);
+    removeNode(ws, nodeId);
+
+    for (const i of incoming) {
+        for (const o of outgoing) {
+            if (!canConnect(ws, i.from, o.to).ok) continue;
+            connect(ws, i.from, o.to, i.arrow === 'end' || o.arrow === 'end' ? 'end' : 'none');
+        }
+    }
+}

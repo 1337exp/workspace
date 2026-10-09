@@ -59,6 +59,7 @@ export default {
             note: { title: 'Заметка' },
             image: { title: 'Картинка' },
             group: { title: 'Группа' },
+            reroute: { title: 'Точка' },
         },
     } as NodeTexts,
 };

@@ -83,7 +83,8 @@ const isEditable = (target: EventTarget | null) =>
 function pinAt(target: EventTarget | null): Anchor | null {
     const pin = (target as Element | null)?.closest<HTMLElement>('[data-pin]');
     const node = pin?.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId;
-    return pin && node ? { node, side: pin.dataset.pin as Side } : null;
+    // У ноды-точки пин «auto» (кольцо вокруг неё): конкретную сторону выберет стор по направлению связи.
+    return pin && node ? { node, side: pin.dataset.pin === 'auto' ? 'right' : (pin.dataset.pin as Side) } : null;
 }
 
 /** Пин под курсором, а если курсор над телом ноды — пин той стороны, к которой курсор ближе (деление по диагоналям). */
@@ -102,7 +103,7 @@ function anchorAt(e: PointerEvent): Anchor | null {
     return { node: el.dataset.nodeId!, side };
 }
 
-function cursorWorld(e: PointerEvent): [number, number] {
+function cursorWorld(e: MouseEvent): [number, number] {
     const rect = root.value!.getBoundingClientRect();
     return screenToWorld(editor.camera, e.clientX - rect.left, e.clientY - rect.top);
 }
@@ -321,6 +322,13 @@ watch(
 
 /** Двойной клик по полосе ноды с названием — правка названия. Событие приходит на холст (он держит захват указателя). */
 function onDblClick(e: MouseEvent) {
+    // Двойной клик по связи: в этом месте встаёт нода-точка.
+    const connId = connIdAt(document.elementFromPoint(e.clientX, e.clientY));
+    if (connId) {
+        editor.splitConnection(connId, cursorWorld(e));
+        return;
+    }
+
     const bar = (document.elementFromPoint(e.clientX, e.clientY) as Element | null)?.closest('.bar');
     const id = bar ? nodeIdAt(bar) : null;
     if (id && editor.registry.find(editor.workspace.nodes[id]?.type ?? '')?.titleKey) editor.titleEditing = id;

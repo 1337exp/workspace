@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { defineNode } from '@/core/define';
 import { Registry } from '@/core/registry';
 import { parse, serialize } from '@/core/serialize';
-import { addNode, anchorPoint, carriedBy, resizeRect, canConnect, connect, createWorkspace, removeNode, reverseConnection, setArrow } from '@/core/workspace';
+import { addNode, anchorPoint, carriedBy, dissolveNode, resizeRect, resolveLink, sideToward, splitConnection, canConnect, connect, createWorkspace, removeNode, reverseConnection, setArrow } from '@/core/workspace';
 import { createDefaultRegistry } from '@/nodes';
 
 const L = (node: string) => ({ node, side: 'left' as const });
@@ -19,7 +19,7 @@ describe('workspace', () => {
     }
 
     it('реестр подхватывает ноды из папок nodes/', () => {
-        expect(registry.all().map((d) => d.id).sort()).toEqual(['group', 'image', 'note']);
+        expect(registry.all().map((d) => d.id).sort()).toEqual(['group', 'image', 'note', 'reroute']);
     });
 
     it('новая нода получает размер и данные из определения', () => {
@@ -236,5 +236,77 @@ describe('resizeRect', () => {
 
         // мышь вернулась: считаем от старта, а не от «упёртого» состояния
         expect(resizeRect(start, 'w', 100, 0, min)).toMatchObject({ x: 200, w: 300 });
+    });
+});
+
+describe('нода-точка (reroute)', () => {
+    const registry = createDefaultRegistry();
+
+    function chain(arrow: 'none' | 'end' = 'end') {
+        const ws = createWorkspace();
+        addNode(ws, registry, 'note', { id: 'a', x: 0, y: 0 }); // правый пин (240, 80)
+        addNode(ws, registry, 'note', { id: 'b', x: 600, y: 0 }); // левый пин (600, 80)
+        const c = connect(ws, R('a'), L('b'), arrow);
+        return { ws, c };
+    }
+
+    it('сторона «в сторону соседа» выбирается по большей оси', () => {
+        expect(sideToward([0, 0], [10, 3])).toBe('right');
+        expect(sideToward([0, 0], [-10, 3])).toBe('left');
+        expect(sideToward([0, 0], [2, -9])).toBe('top');
+        expect(sideToward([0, 0], [2, 9])).toBe('bottom');
+    });
+
+    it('двойной клик делит связь: точка на месте клика, стрелка остаётся на второй половине', () => {
+        const { ws, c } = chain('end');
+        const point = splitConnection(ws, registry, c.id, [400, 200])!;
+
+        expect(point).toMatchObject({ type: 'reroute', x: 390, y: 190, w: 20, h: 20 });
+        expect(ws.connections).toHaveLength(2);
+        const [first, second] = ws.connections;
+        expect(first).toMatchObject({ from: R('a'), to: { node: point.id }, arrow: 'none' });
+        expect(second).toMatchObject({ from: { node: point.id }, to: L('b'), arrow: 'end' });
+    });
+
+    it('удаление точки растворяет её: соседи соединяются напрямую, стрелка сохраняется', () => {
+        const { ws, c } = chain('end');
+        const point = splitConnection(ws, registry, c.id, [400, 200])!;
+        dissolveNode(ws, point.id);
+
+        expect(Object.keys(ws.nodes).sort()).toEqual(['a', 'b']);
+        expect(ws.connections).toHaveLength(1);
+        expect(ws.connections[0]).toMatchObject({ from: R('a'), to: L('b'), arrow: 'end' });
+    });
+
+    it('точка-разветвитель: один вход и два выхода дают две прямые связи', () => {
+        const { ws, c } = chain('none');
+        addNode(ws, registry, 'note', { id: 'c', x: 600, y: 400 });
+        const point = splitConnection(ws, registry, c.id, [400, 200])!;
+        connect(ws, { node: point.id, side: 'right' }, L('c'));
+
+        dissolveNode(ws, point.id);
+        expect(ws.connections.map((x) => `${x.from.node}->${x.to.node}`).sort()).toEqual(['a->b', 'a->c']);
+    });
+
+    it('растворение не создаёт дубликатов и связей ноды с собой', () => {
+        const { ws, c } = chain('none');
+        const point = splitConnection(ws, registry, c.id, [400, 200])!;
+        connect(ws, R('a'), L('b'), 'none'); // a→b уже есть напрямую
+        dissolveNode(ws, point.id);
+        expect(ws.connections).toHaveLength(1);
+    });
+
+    it('линия подходит к точке с той стороны, где сейчас сосед, даже после перемещения точки', () => {
+        const { ws, c } = chain('none');
+        const point = splitConnection(ws, registry, c.id, [400, 200])!;
+        const toPoint = ws.connections[0]!;
+
+        // сосед слева-сверху от точки
+        expect(resolveLink(ws, registry, toPoint)).toMatchObject({ bSide: 'left' });
+
+        // утащили точку левее ноды a: теперь сосед справа
+        point.x = -300;
+        point.y = 60;
+        expect(resolveLink(ws, registry, toPoint)).toMatchObject({ bSide: 'right' });
     });
 });

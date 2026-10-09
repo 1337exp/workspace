@@ -53,7 +53,20 @@ function finishTitle(save: boolean) {
 </script>
 
 <template>
+    <!-- Нода-точка: кружок, за который двигают; кольцо вокруг него — пин, от него тянут связь. -->
     <div
+        v-if="def?.point"
+        class="node point"
+        :class="{ selected }"
+        :data-node-id="node.id"
+        :style="{ transform: `translate(${node.x}px, ${node.y}px)`, width: `${node.w}px`, height: `${node.h}px` }"
+    >
+        <span class="ring" data-pin="auto" />
+        <span class="knob" />
+    </div>
+
+    <div
+        v-else
         class="node"
         :class="{ selected, unknown: !def, container: def?.container }"
         :data-node-id="node.id"
@@ -356,5 +369,33 @@ function finishTitle(save: boolean) {
         transparent 78%
     );
     border-bottom-right-radius: 8px;
+}
+
+/* Нода-точка */
+.node.point .ring {
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    cursor: crosshair;
+}
+
+.node.point .ring:hover,
+:global(.canvas.connecting) .node.point .ring {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tao-color-accent, #f59e0b) 60%, transparent);
+}
+
+.node.point .knob {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    border: 2px solid var(--tao-color-text-muted, #9ca3af);
+    border-radius: 50%;
+    background: var(--tao-color-surface-raised, #1f2937);
+    cursor: grab;
+}
+
+.node.point.selected .knob,
+.node.point:hover .knob {
+    border-color: var(--tao-color-accent, #f59e0b);
 }
 </style>

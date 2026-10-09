@@ -178,3 +178,58 @@ describe('оборванный жест', () => {
         expect(editor.workspace.connections).toEqual([]);
     });
 });
+
+describe('точка на связи', () => {
+    beforeEach(() => setActivePinia(createPinia()));
+
+    function twoLinked() {
+        const editor = useEditor();
+        editor.loadWorkspace({ nodes: {}, connections: [] }, undefined, true);
+        const a = editor.addNodeAtCenter('note');
+        const b = editor.addNodeAtCenter('note');
+        editor.startConnect({ node: a.id, side: 'right' }, [0, 0]);
+        editor.finishConnect({ node: b.id, side: 'left' });
+        return { editor, a, b };
+    }
+
+    it('двойной клик по связи ставит точку и выделяет её, undo возвращает прямую связь', () => {
+        const { editor } = twoLinked();
+        const id = editor.workspace.connections[0]!.id;
+
+        const point = editor.splitConnection(id, [100, 100])!;
+        expect(editor.workspace.connections).toHaveLength(2);
+        expect([...editor.selection]).toEqual([point.id]);
+
+        editor.undo();
+        expect(editor.workspace.connections).toHaveLength(1);
+        expect(editor.workspace.connections[0]!.id).toBe(id);
+    });
+
+    it('Delete на выделенной точке растворяет её', () => {
+        const { editor } = twoLinked();
+        editor.splitConnection(editor.workspace.connections[0]!.id, [100, 100]);
+
+        editor.removeSelected(); // выделена точка
+        expect(Object.keys(editor.workspace.nodes)).toHaveLength(2);
+        expect(editor.workspace.connections).toHaveLength(1);
+    });
+
+    it('связь от точки поворачивается к курсору, а к точке — со стороны источника', () => {
+        const { editor, a } = twoLinked();
+        const point = editor.splitConnection(editor.workspace.connections[0]!.id, [5000, 5000])!;
+
+        editor.startConnect({ node: point.id, side: 'right' }, [5000, 6000]);
+        expect(editor.pending!.origin.side).toBe('bottom'); // курсор строго под точкой
+
+        editor.updateConnect([4000, 5000], null);
+        expect(editor.pending!.origin.side).toBe('left');
+
+        // тянем от обычной ноды в точку: у точки сторона смотрит на источник
+        editor.cancelConnect();
+        point.x = 5000;
+        point.y = a.y - 10; // центр точки на одной высоте с верхним пином ноды a
+        editor.startConnect({ node: a.id, side: 'top' }, [0, 0]);
+        editor.updateConnect([5000, a.y], { node: point.id, side: 'right' });
+        expect(editor.pending!.target!.side).toBe('left'); // источник строго слева от точки
+    });
+});

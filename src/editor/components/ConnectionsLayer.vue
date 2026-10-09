@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
-import { anchorPoint } from '@/core/workspace';
+import { anchorPoint, resolveLink, sideToward } from '@/core/workspace';
 import type { Side } from '@/core/types';
 import { linkShape, type LinkShape } from '../curve';
 import { useEditor } from '../store';
@@ -15,10 +15,8 @@ const lines = computed<Line[]>(() => {
     const out: Line[] = [];
     const z = editor.camera.z;
     for (const c of editor.workspace.connections) {
-        const a = anchorPoint(editor.workspace, c.from);
-        const b = anchorPoint(editor.workspace, c.to);
-        if (!a || !b) continue;
-        out.push({ id: c.id, ...linkShape(a, c.from.side, b, c.to.side, c.arrow, z) });
+        const link = resolveLink(editor.workspace, editor.registry, c);
+        if (link) out.push({ id: c.id, ...linkShape(link.a, link.aSide, link.b, link.bSide, c.arrow, z) });
     }
     return out;
 });
@@ -33,10 +31,7 @@ const preview = computed(() => {
     const end = p.target ? anchorPoint(editor.workspace, p.target) : null;
     const b: [number, number] = end ?? p.cursor;
     // Свободный конец подходит к курсору со стороны исходного пина: линия «входит» в точку курсора по направлению движения.
-    const dx = b[0] - a[0];
-    const dy = b[1] - a[1];
-    const free: Side = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'left' : 'right') : dy >= 0 ? 'top' : 'bottom';
-    const bSide: Side = p.target ? p.target.side : free;
+    const bSide: Side = p.target ? p.target.side : sideToward(b, a);
     return { ...linkShape(a, p.origin.side, b, bSide, editor.defaultArrow, editor.camera.z), invalid: p.valid === false };
 });
 </script>

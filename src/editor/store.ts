@@ -5,16 +5,20 @@ import type { Anchor, Arrow, NodeData, Workspace } from '@/core/types';
 import type { Rect, ResizeEdge } from '@/core/workspace';
 import {
     addNode,
+    anchorPoint,
     canConnect,
     carriedBy,
     connect,
     createWorkspace,
     disconnect,
+    dissolveNode,
+    fitAnchor,
     oppositeSide,
     removeNode,
     resizeRect,
     reverseConnection,
     setArrow,
+    splitConnection as split,
 } from '@/core/workspace';
 import type { MessageArgs, MessageKey } from '@/i18n';
 import { createDefaultRegistry } from '@/nodes';
@@ -132,8 +136,21 @@ export const useEditor = defineStore('editor', () => {
             selectedConnection.value = null;
             return;
         }
-        for (const id of selection) removeNode(workspace.value, id);
+        for (const id of selection) {
+            // Точка растворяется (соседи соединяются напрямую), остальные ноды удаляются со связями.
+            if (registry.find(workspace.value.nodes[id]?.type ?? '')?.point) dissolveNode(workspace.value, id);
+            else removeNode(workspace.value, id);
+        }
         selection.clear();
+    }
+
+    /** Двойной клик по связи: ставит в эту точку ноду-точку и выделяет её. */
+    function splitConnection(connectionId: string, at: readonly [number, number]) {
+        const node = split(workspace.value, registry, connectionId, at);
+        if (!node) return null;
+        setSelection([node.id]);
+        selectedConnection.value = null;
+        return node;
     }
 
     function patchData(nodeId: string, patch: NodeData) {
@@ -167,16 +184,21 @@ export const useEditor = defineStore('editor', () => {
     //---]>
     // протягивание связи
 
+    // У ноды-точки пин один: её сторона всегда смотрит туда, куда тянется связь.
+    const fit = (anchor: Anchor, toward: readonly [number, number]) => fitAnchor(workspace.value, registry, anchor, toward);
+
     function startConnect(origin: Anchor, cursor: [number, number]) {
-        pending.value = { origin, cursor, target: null, valid: null };
+        pending.value = { origin: fit(origin, cursor), cursor, target: null, valid: null };
     }
 
     function updateConnect(cursor: [number, number], target: Anchor | null) {
         const p = pending.value;
         if (!p) return;
         p.cursor = cursor;
-        p.target = target;
-        p.valid = target ? canConnect(workspace.value, p.origin, target).ok : null;
+        p.origin = fit(p.origin, cursor);
+        const origin = anchorPoint(workspace.value, p.origin);
+        p.target = target && origin ? fit(target, origin) : target;
+        p.valid = p.target ? canConnect(workspace.value, p.origin, p.target).ok : null;
     }
 
     /** Бросить протягивание без связи (жест оборван). */
@@ -188,9 +210,11 @@ export const useEditor = defineStore('editor', () => {
     function finishConnect(target: Anchor | null): boolean {
         const p = pending.value;
         pending.value = null;
-        if (!p || !target || !canConnect(workspace.value, p.origin, target).ok) return false;
+        const origin = p && anchorPoint(workspace.value, p.origin);
+        const to = target && origin ? fit(target, origin) : null;
+        if (!p || !to || !canConnect(workspace.value, p.origin, to).ok) return false;
 
-        const created = connect(workspace.value, p.origin, target, defaultArrow.value);
+        const created = connect(workspace.value, p.origin, to, defaultArrow.value);
         selectedConnection.value = created.id;
         selection.clear();
         return true;
@@ -431,6 +455,7 @@ export const useEditor = defineStore('editor', () => {
         moveSelected,
         resizeFrom,
         removeSelected: recorded(removeSelected),
+        splitConnection: recorded(splitConnection),
         patchData: recorded(patchData, (id) => `data:${id}`),
         setArrowStyle: recorded(setArrowStyle),
         reverseSelected: recorded(reverseSelected),
