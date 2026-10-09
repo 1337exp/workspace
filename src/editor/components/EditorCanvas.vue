@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Anchor, Side } from '@/core/types';
 import type { Rect, ResizeEdge } from '@/core/workspace';
 import { panBy, screenToWorld, zoomAt } from '../camera';
+import { edgeScrollVelocity } from '../edgescroll';
 import { useEditor } from '../store';
 import ConnectionsLayer from './ConnectionsLayer.vue';
 import NodeView from './NodeView.vue';
@@ -13,6 +14,9 @@ const root = ref<HTMLElement | null>(null);
 const GRID = 24;
 const ZOOM_SPEED = 0.0015;
 const PAN_CLICK_THRESHOLD = 4; // ПКМ, сдвинутая меньше, — это клик (открывает палитру)
+
+/** Всё, что нужно знать о положении указателя: годится и настоящее событие, и последнее известное положение. */
+type Pointer = Pick<MouseEvent, 'clientX' | 'clientY'>;
 
 type Mode = 'idle' | 'pan' | 'drag' | 'marquee' | 'connect' | 'resize';
 let mode: Mode = 'idle';
@@ -88,7 +92,7 @@ function pinAt(target: EventTarget | null): Anchor | null {
 }
 
 /** Пин под курсором, а если курсор над телом ноды — пин той стороны, к которой курсор ближе (деление по диагоналям). */
-function anchorAt(e: PointerEvent): Anchor | null {
+function anchorAt(e: Pointer): Anchor | null {
     const under = document.elementFromPoint(e.clientX, e.clientY);
     const pin = pinAt(under);
     if (pin) return pin;
@@ -103,7 +107,7 @@ function anchorAt(e: PointerEvent): Anchor | null {
     return { node: el.dataset.nodeId!, side };
 }
 
-function cursorWorld(e: MouseEvent): [number, number] {
+function cursorWorld(e: Pointer): [number, number] {
     const rect = root.value!.getBoundingClientRect();
     return screenToWorld(editor.camera, e.clientX - rect.left, e.clientY - rect.top);
 }
@@ -219,6 +223,70 @@ function cancelGesture() {
     }
     mode = 'idle';
     marquee.value = null;
+    stopAutoScroll();
+}
+
+//--------------------------------------------------
+// Автопрокрутка: пока тянешь ноду, рамку, связь или край и курсор у края холста, камера едет в ту сторону.
+// Цикл крутится, даже когда мышь стоит; скорость считается по времени, а не по кадрам.
+
+const SCROLL_MODES: readonly Mode[] = ['drag', 'resize', 'marquee', 'connect'];
+const MAX_FRAME_S = 0.05; // после паузы (вкладка спала) камера не «прыгает»
+let scrollFrame = 0;
+let scrollLast = 0;
+
+function scrollVelocity(): [number, number] {
+    const el = root.value;
+    if (!el || !SCROLL_MODES.includes(mode)) return [0, 0];
+    const r = el.getBoundingClientRect();
+    return edgeScrollVelocity(lastX - r.left, lastY - r.top, r.width, r.height);
+}
+
+function kickAutoScroll() {
+    if (scrollFrame) return;
+    const [vx, vy] = scrollVelocity();
+    if (vx === 0 && vy === 0) return;
+    scrollLast = performance.now();
+    scrollFrame = requestAnimationFrame(autoScrollFrame);
+}
+
+function stopAutoScroll() {
+    cancelAnimationFrame(scrollFrame);
+    scrollFrame = 0;
+}
+
+function autoScrollFrame(now: number) {
+    scrollFrame = 0;
+    const [vx, vy] = scrollVelocity();
+    if (vx === 0 && vy === 0) return;
+
+    const dt = Math.min((now - scrollLast) / 1000, MAX_FRAME_S);
+    scrollLast = now;
+
+    // Камера уехала на (sx, sy) экранных px, и то, что было под курсором, оказалось в стороне:
+    // догоняем курсор тем, что у жеста привязано к миру.
+    const sx = vx * dt;
+    const sy = vy * dt;
+    const z = editor.camera.z;
+    editor.camera = panBy(editor.camera, -sx, -sy);
+
+    const pointer: Pointer = { clientX: lastX, clientY: lastY };
+    if (mode === 'drag') {
+        editor.moveSelected(sx / z, sy / z);
+    } else if (mode === 'resize') {
+        resizeDx += sx / z;
+        resizeDy += sy / z;
+        editor.resizeFrom(resizeId, resizeEdge, resizeStart, resizeDx, resizeDy);
+    } else if (mode === 'connect') {
+        editor.updateConnect(cursorWorld(pointer), anchorAt(pointer));
+    } else if (mode === 'marquee' && marquee.value) {
+        // Начало рамки стоит на месте в мире, значит на экране уехало вместе с камерой.
+        const m = marquee.value;
+        marquee.value = { x0: m.x0 - sx, y0: m.y0 - sy, x1: lastX, y1: lastY };
+        editor.setSelection([...baseSelection, ...nodesInMarquee()]);
+    }
+
+    scrollFrame = requestAnimationFrame(autoScrollFrame);
 }
 
 function onPointerMove(e: PointerEvent) {
@@ -248,6 +316,8 @@ function onPointerMove(e: PointerEvent) {
         marquee.value = { ...marquee.value, x1: e.clientX, y1: e.clientY };
         editor.setSelection([...baseSelection, ...nodesInMarquee()]);
     }
+
+    kickAutoScroll();
 }
 
 function onPointerUp(e: PointerEvent) {
@@ -269,6 +339,7 @@ function onPointerUp(e: PointerEvent) {
     }
     mode = 'idle';
     marquee.value = null;
+    stopAutoScroll();
     root.value?.releasePointerCapture(e.pointerId);
 }
 
@@ -288,6 +359,7 @@ onUnmounted(() => {
     resizeObserver?.disconnect();
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('blur', cancelGesture);
+    stopAutoScroll();
 });
 
 /**
