@@ -6,6 +6,7 @@ import '@/assets/font/roboto.css';
 import '@/assets/fontello/css/fontello.css';
 import '@/styles/theme.css';
 import '@/styles/app.css';
+import '@/styles/touch.css';
 import App from './App.vue';
 import { useEditor } from './editor/store';
 import { initLocale } from './i18n';

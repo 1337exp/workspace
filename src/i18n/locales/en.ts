@@ -47,6 +47,12 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         empty: 'Nothing found',
     },
 
+    touch: {
+        select: 'Select',
+        selectHint: 'Select mode: one finger draws a box, tapping a node adds it to the selection',
+        delete: 'Delete',
+    },
+
     nodes: {
         note: { placeholder: 'Note text…' },
         image: {

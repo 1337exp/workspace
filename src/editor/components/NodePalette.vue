@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from '@/i18n';
 import { useEditor } from '../store';
+import { coarse } from '../touch';
 
 const editor = useEditor();
 const { t, nodeTitle } = useI18n();
@@ -39,7 +40,8 @@ watch(
         query.value = '';
         active.value = 0;
         await nextTick();
-        input.value?.focus();
+        // На сенсоре поле поиска не фокусируем: виртуальная клавиатура закрыла бы список.
+        if (!coarse.value) input.value?.focus();
     },
 );
 watch(query, () => (active.value = 0));

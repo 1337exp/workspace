@@ -93,6 +93,13 @@ path {
     cursor: pointer;
 }
 
+/* Палец толще курсора: зона попадания по связи шире. */
+@media (pointer: coarse) {
+    .hit {
+        stroke-width: 30;
+    }
+}
+
 .conn:hover {
     --link: var(--tao-color-text-strong, #fff);
 }

@@ -44,6 +44,12 @@ export default {
         empty: 'Ничего не найдено',
     },
 
+    touch: {
+        select: 'Выделение',
+        selectHint: 'Режим выделения: рамка одним пальцем, тап по ноде добавляет её к выделению',
+        delete: 'Удалить',
+    },
+
     nodes: {
         note: { placeholder: 'Текст заметки…' },
         image: {

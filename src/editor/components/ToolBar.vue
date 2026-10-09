@@ -4,6 +4,7 @@ import { TaoButton, TaoSegmented, TaoSegmentedOption } from '@1337exp/taoui';
 import type { Arrow } from '@/core/types';
 import { LOCALE_CODES, LOCALE_NAMES, isLocaleCode, setLocale, useI18n } from '@/i18n';
 import { downloadText, FILE_NAME, MAX_FILE_BYTES } from '../file';
+import { coarse } from '../touch';
 import { useEditor } from '../store';
 
 const editor = useEditor();
@@ -14,6 +15,8 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const selectedLink = computed(() => editor.workspace.connections.find((c) => c.id === editor.selectedConnection));
 /** Показываем вид выбранной связи, а без выбора — вид новых связей. */
 const arrow = computed<Arrow>(() => selectedLink.value?.arrow ?? editor.defaultArrow);
+
+const hasSelection = computed(() => editor.selection.size > 0 || editor.selectedConnection !== null);
 
 function setArrow(value: unknown) {
     if (value === 'none' || value === 'end') editor.setArrowStyle(value);
@@ -67,6 +70,21 @@ async function onFile(e: Event) {
             <TaoSegmentedOption value="end">{{ t('link.arrow') }} →</TaoSegmentedOption>
         </TaoSegmented>
         <TaoButton variant="secondary" size="small" :disabled="!selectedLink" @click="editor.reverseSelected()"><i class="icon-shuffle" />{{ t('link.reverse') }}</TaoButton>
+
+        <template v-if="coarse">
+            <span class="sep" />
+            <TaoButton
+                :variant="editor.selectMode ? 'primary' : 'secondary'"
+                size="small"
+                :title="t('touch.selectHint')"
+                @click="editor.selectMode = !editor.selectMode"
+            >
+                <i class="icon-dot-circled" />{{ t('touch.select') }}
+            </TaoButton>
+            <TaoButton variant="secondary" size="small" :disabled="!hasSelection" @click="editor.removeSelected()">
+                <i class="icon-trash-1" />{{ t('touch.delete') }}
+            </TaoButton>
+        </template>
 
         <span class="sep" />
 

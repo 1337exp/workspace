@@ -4,6 +4,7 @@ import type { Anchor, Side } from '@/core/types';
 import type { Rect, ResizeEdge } from '@/core/workspace';
 import { panBy, screenToWorld, zoomAt } from '../camera';
 import { edgeScrollVelocity } from '../edgescroll';
+import { LONG_PRESS_MS, TapRecognizer, pinchOf, pinchStep, type Pinch, type Sample } from '../gestures';
 import { useEditor } from '../store';
 import ConnectionsLayer from './ConnectionsLayer.vue';
 import NodeView from './NodeView.vue';
@@ -18,7 +19,7 @@ const PAN_CLICK_THRESHOLD = 4; // ПКМ, сдвинутая меньше, — �
 /** Всё, что нужно знать о положении указателя: годится и настоящее событие, и последнее известное положение. */
 type Pointer = Pick<MouseEvent, 'clientX' | 'clientY'>;
 
-type Mode = 'idle' | 'pan' | 'drag' | 'marquee' | 'connect' | 'resize';
+type Mode = 'idle' | 'pan' | 'drag' | 'marquee' | 'connect' | 'resize' | 'pinch';
 let mode: Mode = 'idle';
 let lastX = 0;
 let lastY = 0;
@@ -30,6 +31,20 @@ let resizeStart: Rect = { x: 0, y: 0, w: 0, h: 0 };
 /** Сдвиг мыши с начала изменения размера, мировые единицы. */
 let resizeDx = 0;
 let resizeDy = 0;
+
+// Сенсор: пальцы на холсте, распознавание тапов и долгого нажатия, состояние щипка.
+const touches = new Map<number, { x: number; y: number }>();
+const taps = new TapRecognizer();
+let longPressTimer: ReturnType<typeof setTimeout> | undefined;
+let lastTouchAt = 0;
+let pinch: Pinch = { cx: 0, cy: 0, dist: 0 };
+
+/** `?debug=touch`: в углу видно последний распознанный жест и число пальцев. */
+const debug = typeof location !== 'undefined' && new URLSearchParams(location.search).get('debug') === 'touch';
+const debugText = ref('');
+const note = (label: string) => {
+    if (debug) debugText.value = `${label} · пальцев: ${touches.size}`;
+};
 
 /** Рамка выделения в клиентских координатах. */
 const marquee = ref<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
@@ -112,7 +127,7 @@ function cursorWorld(e: Pointer): [number, number] {
     return screenToWorld(editor.camera, e.clientX - rect.left, e.clientY - rect.top);
 }
 
-function openPaletteAt(e: PointerEvent, origin: Anchor | null) {
+function openPaletteAt(e: Pointer, origin: Anchor | null) {
     const rect = root.value!.getBoundingClientRect();
     editor.openPalette([e.clientX - rect.left, e.clientY - rect.top], cursorWorld(e), origin);
 }
@@ -137,14 +152,148 @@ function nodesInMarquee(): string[] {
 
 //--------------------------------------------------
 
+const sampleOf = (e: PointerEvent): Sample => ({ x: e.clientX, y: e.clientY, t: performance.now() });
+
+function capture(e: PointerEvent) {
+    try {
+        root.value?.setPointerCapture(e.pointerId);
+    } catch {
+        // указатель уже ушёл: захватывать нечего
+    }
+}
+
+function releaseCapture(e: { pointerId: number }) {
+    try {
+        root.value?.releasePointerCapture(e.pointerId);
+    } catch {
+        // захвата уже нет
+    }
+}
+
+function clearLongPress() {
+    clearTimeout(longPressTimer);
+    longPressTimer = undefined;
+}
+
+//--------------------------------------------------
+// Сенсор
+
+/** Второй палец лёг на холст: начатый жест отменяется, начинается щипок. Возвращает true, если событие обработано. */
+function touchDown(e: PointerEvent): boolean {
+    // Первичный палец это начало нового касания: других пальцев на экране сейчас нет. Всё, что мы помним, зависло
+    // (pointerup ушёл мимо холста, например на палитру, открытую долгим нажатием), и его надо забыть, иначе
+    // следующий тап посчитается вторым пальцем и включит щипок насовсем.
+    if (e.isPrimary) {
+        touches.clear();
+        if (mode !== 'idle') abortGesture();
+    }
+
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size < 2) return false;
+
+    editor.closePalette();
+    abortGesture();
+    mode = 'pinch';
+    rebasePinch();
+    capture(e);
+    e.preventDefault();
+    note('щипок');
+    return true;
+}
+
+/** Палец лёг на холст (первый): запоминаем для тапа и ставим таймер долгого нажатия. Возвращает true для второго тапа подряд. */
+function beginTouch(e: PointerEvent): boolean {
+    clearLongPress();
+    const doubleDown = taps.down(sampleOf(e));
+    longPressTimer = setTimeout(onLongPress, LONG_PRESS_MS);
+    return doubleDown;
+}
+
+/** Палец лежит на пустом месте и не двигается: это правый клик сенсора, открываем палитру. */
+function onLongPress() {
+    longPressTimer = undefined;
+    if (mode !== 'pan' || !taps.longPressDue(performance.now() + 50)) return;
+
+    // Захват не отпускаем: палитра открывается под пальцем, и без захвата pointerup ушёл бы на неё, а не на холст.
+    taps.cancel();
+    mode = 'idle';
+    navigator.vibrate?.(15);
+    openPaletteAt({ clientX: lastX, clientY: lastY }, null);
+    note('долгое нажатие');
+}
+
+/**
+ * Палец поднят или отменён где угодно в окне, а не только над холстом: например, над палитрой, которая открылась
+ * под ним. Холст должен перестать считать этот палец лежащим, иначе он останется «вторым» навсегда.
+ */
+function purgeTouch(e: PointerEvent) {
+    if (e.pointerType !== 'touch' || !touches.delete(e.pointerId)) return;
+    if (mode !== 'pinch') return;
+    if (touches.size === 0) mode = 'idle';
+    else rebasePinch();
+}
+
+/** Палец поднят. Возвращает true, если событие обработано целиком (идёт щипок). */
+function touchUp(e: PointerEvent): boolean {
+    touches.delete(e.pointerId);
+
+    if (mode === 'pinch') {
+        if (touches.size === 0) {
+            mode = 'idle';
+            note('щипок закончен');
+        } else {
+            rebasePinch();
+        }
+        releaseCapture(e);
+        return true;
+    }
+
+    clearLongPress();
+    lastTouchAt = Date.now();
+    const result = taps.up(sampleOf(e));
+    if (result === 'double') {
+        activateAt(e);
+        note('двойной тап');
+    } else if (result === 'tap') {
+        // Тап по пустому месту снимает выделение (мы не трогали его при касании: палец мог пойти двигать холст).
+        if (mode === 'pan') editor.setSelection([]);
+        note('тап');
+    }
+    return false;
+}
+
+function rebasePinch() {
+    const [a, b] = [...touches.values()];
+    if (a) pinch = pinchOf(a, b);
+}
+
+/** Щипок и жест двумя пальцами; с одним оставшимся пальцем просто двигаем холст. */
+function pinchMove() {
+    const [a, b] = [...touches.values()];
+    const el = root.value;
+    if (!a || !el) return;
+
+    const next = pinchOf(a, b);
+    const step = pinchStep(pinch, next);
+    const rect = el.getBoundingClientRect();
+    editor.camera = panBy(zoomAt(editor.camera, step.pivot[0] - rect.left, step.pivot[1] - rect.top, step.factor), step.pan[0], step.pan[1]);
+    pinch = next;
+}
+
+//--------------------------------------------------
+
 function onPointerDown(e: PointerEvent) {
     const el = root.value;
     if (!el) return;
+
+    const touch = e.pointerType === 'touch';
+    if (touch && touchDown(e)) return; // второй палец: щипок
 
     editor.closePalette();
     lastX = e.clientX;
     lastY = e.clientY;
     panDistance = 0;
+    const doubleDown = touch && beginTouch(e);
 
     if (e.button === 1 || e.button === 2) {
         el.focus();
@@ -172,7 +321,8 @@ function onPointerDown(e: PointerEvent) {
         editor.selectConnection(null);
 
         const pin = pinAt(e.target);
-        const additive = e.ctrlKey || e.shiftKey;
+        // На сенсоре Ctrl нет: его роль играет режим «Выделение» в тулбаре.
+        const additive = e.ctrlKey || e.shiftKey || (touch && editor.selectMode);
         if (id) editor.raise(id);
 
         if (pin) {
@@ -196,18 +346,23 @@ function onPointerDown(e: PointerEvent) {
             }
             editor.beginDrag();
             mode = 'drag';
+        } else if (touch && !editor.selectMode && !doubleDown) {
+            // Один палец по пустому месту двигает холст; выделение (если тап) снимется при отпускании.
+            mode = 'pan';
+            note('холст');
         } else {
             baseSelection = additive ? [...editor.selection] : [];
             editor.setSelection(baseSelection);
             marquee.value = { x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY };
             mode = 'marquee';
+            if (touch) note('рамка');
         }
     } else {
         return;
     }
 
     e.preventDefault();
-    el.setPointerCapture(e.pointerId);
+    capture(e);
 }
 
 /**
@@ -215,8 +370,9 @@ function onPointerDown(e: PointerEvent) {
  * закрываем начатое, чтобы ничего не «зависло»: протянутая связь, рамка выделения, захваченная нода.
  * Сделанное к этому моменту (сдвиг, размер) остаётся и записывается в историю.
  */
-function cancelGesture() {
-    if (mode === 'idle') return;
+function abortGesture() {
+    clearLongPress();
+    taps.cancel();
     if (mode === 'connect') {
         editor.cancelConnect();
     } else if (mode === 'drag' || mode === 'resize') {
@@ -226,6 +382,27 @@ function cancelGesture() {
     mode = 'idle';
     marquee.value = null;
     stopAutoScroll();
+}
+
+/** Оборвать всё, включая пальцы на холсте (потеря фокуса окна, системная отмена). */
+function cancelGesture() {
+    touches.clear();
+    abortGesture();
+}
+
+function onPointerCancel(e: PointerEvent) {
+    touches.delete(e.pointerId);
+    if (mode === 'pinch' && touches.size > 0) {
+        rebasePinch();
+        return;
+    }
+    cancelGesture();
+}
+
+/** Захват указателя пропал: если жест ещё идёт и это не щипок (там палец снимают сами), рвём его. */
+function onLostCapture() {
+    if (mode === 'pinch' || mode === 'idle') return;
+    cancelGesture();
 }
 
 //--------------------------------------------------
@@ -292,8 +469,18 @@ function autoScrollFrame(now: number) {
 }
 
 function onPointerMove(e: PointerEvent) {
-    // Кнопку отпустили где-то вне окна: событие мы не увидели, но по движению видно, что жест окончен.
-    if (mode !== 'idle' && e.buttons === 0) {
+    const touch = e.pointerType === 'touch';
+    if (touch) {
+        if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (mode === 'pinch') {
+            pinchMove();
+            return;
+        }
+        if (taps.move(sampleOf(e))) clearLongPress();
+        // Пока палец не вышел за допуск тапа, холст и ноды стоят: дрожание не должно двигать ни то, ни другое.
+        if (!taps.isMoved && (mode === 'pan' || mode === 'drag' || mode === 'resize')) return;
+    } else if (mode !== 'idle' && e.buttons === 0) {
+        // Кнопку отпустили где-то вне окна: событие мы не увидели, но по движению видно, что жест окончен.
         cancelGesture();
         return;
     }
@@ -323,6 +510,7 @@ function onPointerMove(e: PointerEvent) {
 }
 
 function onPointerUp(e: PointerEvent) {
+    if (e.pointerType === 'touch' && touchUp(e)) return;
     if (mode === 'idle') return;
     if (mode === 'connect') {
         const under = document.elementFromPoint(e.clientX, e.clientY);
@@ -342,7 +530,7 @@ function onPointerUp(e: PointerEvent) {
     mode = 'idle';
     marquee.value = null;
     stopAutoScroll();
-    root.value?.releasePointerCapture(e.pointerId);
+    releaseCapture(e);
 }
 
 // Размер холста нужен стору, чтобы ставить новые ноды в центр экрана.
@@ -356,12 +544,17 @@ onMounted(() => {
     resizeObserver.observe(el);
     window.addEventListener('keydown', onKey);
     window.addEventListener('blur', cancelGesture);
+    window.addEventListener('pointerup', purgeTouch);
+    window.addEventListener('pointercancel', purgeTouch);
 });
 onUnmounted(() => {
     resizeObserver?.disconnect();
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('blur', cancelGesture);
+    window.removeEventListener('pointerup', purgeTouch);
+    window.removeEventListener('pointercancel', purgeTouch);
     stopAutoScroll();
+    clearLongPress();
 });
 
 /**
@@ -394,18 +587,27 @@ watch(
     },
 );
 
-/** Двойной клик по полосе ноды с названием — правка названия. Событие приходит на холст (он держит захват указателя). */
-function onDblClick(e: MouseEvent) {
-    // Двойной клик по связи: в этом месте встаёт нода-точка.
-    const connId = connIdAt(document.elementFromPoint(e.clientX, e.clientY));
+/**
+ * Двойное действие (двойной клик или двойной тап): по связи ставит ноду-точку, по полосе ноды с названием
+ * включает правку названия.
+ */
+function activateAt(p: Pointer) {
+    const under = document.elementFromPoint(p.clientX, p.clientY);
+    const connId = connIdAt(under);
     if (connId) {
-        editor.splitConnection(connId, cursorWorld(e));
+        editor.splitConnection(connId, cursorWorld(p));
         return;
     }
 
-    const bar = (document.elementFromPoint(e.clientX, e.clientY) as Element | null)?.closest('.bar');
+    const bar = (under as Element | null)?.closest('.bar');
     const id = bar ? nodeIdAt(bar) : null;
     if (id && editor.registry.find(editor.workspace.nodes[id]?.type ?? '')?.titleKey) editor.titleEditing = id;
+}
+
+/** Событие приходит на холст (он держит захват указателя). На сенсоре двойной тап распознаём сами, иначе действие сработало бы дважды. */
+function onDblClick(e: MouseEvent) {
+    if (Date.now() - lastTouchAt < 800) return;
+    activateAt(e);
 }
 
 function onWheel(e: WheelEvent) {
@@ -424,8 +626,8 @@ function onWheel(e: WheelEvent) {
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
-        @pointercancel="cancelGesture"
-        @lostpointercapture="cancelGesture"
+        @pointercancel="onPointerCancel"
+        @lostpointercapture="onLostCapture"
         @wheel.prevent="onWheel"
         @contextmenu.prevent
         @dblclick="onDblClick"
@@ -447,6 +649,7 @@ function onWheel(e: WheelEvent) {
         </div>
 
         <div v-if="marquee" class="marquee" :style="marqueeStyle" />
+        <div v-if="debug" class="gesture-debug">{{ debugText }}</div>
     </div>
 </template>
 
@@ -464,6 +667,29 @@ function onWheel(e: WheelEvent) {
         linear-gradient(to right, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
     touch-action: none;
+    /* Сенсор: без выделения текста, лупы и подсветки тапа; в полях ввода текст выделяется как обычно. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.canvas :deep(textarea),
+.canvas :deep(input) {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.gesture-debug {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font: 12px/1.3 monospace;
+    pointer-events: none;
 }
 
 .world {

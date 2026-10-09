@@ -116,6 +116,20 @@ function finishTitle(save: boolean) {
     top: 0;
     left: 0;
     box-sizing: border-box;
+    /* Размеры зон захвата. Пальцу нужны цели крупнее, чем курсору. */
+    --pin-size: 26px;
+    --edge-size: 10px;
+    --corner-size: 14px;
+    --ring-size: 12px;
+}
+
+@media (pointer: coarse) {
+    .node {
+        --pin-size: 44px;
+        --edge-size: 28px;
+        --corner-size: 32px;
+        --ring-size: 22px;
+    }
 }
 
 .frame {
@@ -236,50 +250,50 @@ function finishTitle(save: boolean) {
     min-height: 0;
 }
 
-/* Зоны захвата граней ноды: полоса 10 px, половина снаружи рамки; углы чуть больше. */
+/* Зоны захвата граней ноды: полоса по краю (половина снаружи рамки), углы чуть больше. */
 .edge {
     position: absolute;
 }
 
 .edge.n,
 .edge.s {
-    left: 8px;
-    right: 8px;
-    height: 10px;
+    left: var(--corner-size);
+    right: var(--corner-size);
+    height: var(--edge-size);
     cursor: ns-resize;
 }
 
 .edge.e,
 .edge.w {
-    top: 8px;
-    bottom: 8px;
-    width: 10px;
+    top: var(--corner-size);
+    bottom: var(--corner-size);
+    width: var(--edge-size);
     cursor: ew-resize;
 }
 
-.edge.n { top: -5px; }
-.edge.s { bottom: -5px; }
-.edge.e { right: -5px; }
-.edge.w { left: -5px; }
+.edge.n { top: calc(var(--edge-size) / -2); }
+.edge.s { bottom: calc(var(--edge-size) / -2); }
+.edge.e { right: calc(var(--edge-size) / -2); }
+.edge.w { left: calc(var(--edge-size) / -2); }
 
 .edge.ne,
 .edge.nw,
 .edge.se,
 .edge.sw {
-    width: 14px;
-    height: 14px;
+    width: var(--corner-size);
+    height: var(--corner-size);
 }
 
-.edge.ne { top: -6px; right: -6px; cursor: nesw-resize; }
-.edge.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
-.edge.nw { top: -6px; left: -6px; cursor: nwse-resize; }
-.edge.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+.edge.ne { top: calc(var(--corner-size) / -2); right: calc(var(--corner-size) / -2); cursor: nesw-resize; }
+.edge.sw { bottom: calc(var(--corner-size) / -2); left: calc(var(--corner-size) / -2); cursor: nesw-resize; }
+.edge.nw { top: calc(var(--corner-size) / -2); left: calc(var(--corner-size) / -2); cursor: nwse-resize; }
+.edge.se { bottom: calc(var(--corner-size) / -2); right: calc(var(--corner-size) / -2); cursor: nwse-resize; }
 
 /* Область пина шире точки, чтобы в него было легко попасть. Точка видна у наведённой/выбранной ноды. */
 .pin {
     position: absolute;
-    width: 26px;
-    height: 26px;
+    width: var(--pin-size);
+    height: var(--pin-size);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -289,29 +303,29 @@ function finishTitle(save: boolean) {
 .pin.left,
 .pin.right {
     top: 50%;
-    margin-top: -13px;
+    margin-top: calc(var(--pin-size) / -2);
 }
 
 .pin.left {
-    left: -13px;
+    left: calc(var(--pin-size) / -2);
 }
 
 .pin.right {
-    right: -13px;
+    right: calc(var(--pin-size) / -2);
 }
 
 .pin.top,
 .pin.bottom {
     left: 50%;
-    margin-left: -13px;
+    margin-left: calc(var(--pin-size) / -2);
 }
 
 .pin.top {
-    top: -13px;
+    top: calc(var(--pin-size) / -2);
 }
 
 .pin.bottom {
-    bottom: -13px;
+    bottom: calc(var(--pin-size) / -2);
 }
 
 .dot {
@@ -350,7 +364,7 @@ function finishTitle(save: boolean) {
 /* Нода-точка */
 .node.point .ring {
     position: absolute;
-    inset: -12px;
+    inset: calc(var(--ring-size) * -1);
     border-radius: 50%;
     cursor: crosshair;
 }
@@ -373,5 +387,11 @@ function finishTitle(save: boolean) {
 .node.point.selected .knob,
 .node.point:hover .knob {
     border-color: var(--tao-color-accent, #f59e0b);
+}
+/* Нет наведения: пины видны бледно всегда, у выбранной ноды ярко (правила выше сильнее по специфичности). */
+@media (pointer: coarse) {
+    .dot {
+        opacity: 0.45;
+    }
 }
 </style>

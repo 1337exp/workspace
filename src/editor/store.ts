@@ -69,6 +69,8 @@ export const useEditor = defineStore('editor', () => {
     const selectedConnection = ref<string | null>(null);
     const pending = ref<PendingConnection | null>(null);
     const palette = ref<PaletteState | null>(null);
+    /** Сенсорный режим «Выделение»: один палец рисует рамку, тап по ноде добавляет или снимает её (роль Ctrl+клика). */
+    const selectMode = ref(false);
     /** Нода, у которой сейчас правится название (двойной клик по полосе). */
     const titleEditing = ref<string | null>(null);
     /** Вид новых связей. Пока выбрана связь, переключатель меняет её, а не это значение. */
@@ -438,6 +440,7 @@ export const useEditor = defineStore('editor', () => {
         pending,
         palette,
         titleEditing,
+        selectMode,
         defaultArrow,
         viewport,
         notice,
