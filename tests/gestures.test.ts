@@ -7,7 +7,9 @@ import {
     TAP_SLOP_PX,
     TapRecognizer,
     pinchOf,
-    pinchStep,
+    PINCH_DEADBAND_PX,
+    PINCH_ENGAGE_PX,
+    PinchTracker,
 } from '@/editor/gestures';
 
 const at = (x: number, y: number, t: number) => ({ x, y, t });
@@ -100,22 +102,148 @@ describe('pinch', () => {
         expect(pinchOf({ x: 5, y: 7 })).toEqual({ cx: 5, cy: 7, dist: 0 });
     });
 
-    it('разведение пальцев увеличивает, сведение уменьшает, центр сдвигает камеру', () => {
-        const a = pinchOf({ x: 0, y: 0 }, { x: 100, y: 0 });
-        const out = pinchStep(a, pinchOf({ x: -50, y: 0 }, { x: 150, y: 0 }));
-        expect(out.factor).toBe(2);
-        expect(out.pivot).toEqual([50, 0]);
-        expect(out.pan).toEqual([0, 0]);
+    const spread = (d: number, cx = 0, cy = 0) => pinchOf({ x: cx - d / 2, y: cy }, { x: cx + d / 2, y: cy });
 
-        expect(pinchStep(a, pinchOf({ x: 25, y: 0 }, { x: 75, y: 0 })).factor).toBe(0.5);
-        expect(pinchStep(a, pinchOf({ x: 10, y: 20 }, { x: 110, y: 20 })).pan).toEqual([10, 20]);
+    it('пока расстояние не изменилось осознанно, это только сдвиг: масштаб не трогается', () => {
+        const t = new PinchTracker();
+        t.begin(spread(40));
+        // дрожание вокруг 40 px, сдвиг центра на 10
+        for (const d of [41, 39, 42, 38, 43, 40]) expect(t.update(spread(d, 10)).factor).toBe(1);
+        expect(t.isZooming).toBe(false);
     });
 
-    it('если пальцев не два (подняли один), масштаб не меняется, а сдвиг остаётся', () => {
-        const two = pinchOf({ x: 0, y: 0 }, { x: 100, y: 0 });
-        const one = pinchOf({ x: 30, y: 10 });
-        expect(pinchStep(two, one).factor).toBe(1);
-        expect(pinchStep(one, pinchOf({ x: 35, y: 12 })).pan).toEqual([5, 2]);
-        expect(pinchStep(one, pinchOf({ x: 0, y: 0 }, { x: 10, y: 0 })).factor).toBe(1);
+    it('сдвиг центра работает всегда, масштаб вокруг прежнего центра', () => {
+        const t = new PinchTracker();
+        t.begin(spread(100, 50, 50));
+        const step = t.update(spread(100, 70, 60));
+        expect(step.pan).toEqual([20, 10]);
+        expect(step.pivot).toEqual([50, 50]);
+    });
+
+    it('масштаб включается после порога без скачка, дальше идёт плавно', () => {
+        const t = new PinchTracker();
+        t.begin(spread(40));
+
+        expect(t.update(spread(PINCH_ENGAGE_PX + 40)).factor).toBe(1); // порог пройден: отсчёт с этого расстояния
+        expect(t.isZooming).toBe(true);
+
+        const out = t.update(spread(PINCH_ENGAGE_PX + 40 + 30));
+        expect(out.factor).toBeCloseTo((PINCH_ENGAGE_PX + 70) / (PINCH_ENGAGE_PX + 40), 10);
+        const back = t.update(spread(PINCH_ENGAGE_PX + 40)); // обратно
+        expect(back.factor).toBeLessThan(1);
+    });
+
+    it('после включения мелкое дрожание отсекается мёртвой зоной, а накопленный дрейф не теряется', () => {
+        const t = new PinchTracker();
+        t.begin(spread(100));
+        t.update(spread(130)); // включили
+        expect(t.update(spread(130 + PINCH_DEADBAND_PX - 0.5)).factor).toBe(1);
+        expect(t.update(spread(130 - PINCH_DEADBAND_PX + 0.5)).factor).toBe(1);
+
+        // медленное, но настоящее движение: набегает за порог и применяется
+        let total = 1;
+        for (let d = 130; d <= 160; d += 1) total *= t.update(spread(d)).factor;
+        expect(total).toBeCloseTo(160 / 130, 1);
+    });
+
+    it('на малом и большом расстоянии одно и то же дрожание ведёт себя одинаково: не масштабирует', () => {
+        for (const base of [30, 400]) {
+            const t = new PinchTracker();
+            t.begin(spread(base));
+            let zoomSteps = 0;
+            for (let i = 0; i < 40; i++) if (t.update(spread(base + (i % 2 ? 2 : -2), i)).factor !== 1) zoomSteps++;
+            expect(zoomSteps).toBe(0);
+        }
+    });
+
+    it('с одним пальцем масштаба нет, при смене числа пальцев begin сбрасывает отсчёт', () => {
+        const t = new PinchTracker();
+        t.begin(pinchOf({ x: 30, y: 10 }));
+        expect(t.update(pinchOf({ x: 35, y: 12 }))).toMatchObject({ factor: 1, pan: [5, 2] });
+        expect(t.update(spread(500)).factor).toBe(1); // второй палец появился без begin: масштаб не включается
+
+        t.begin(spread(100));
+        expect(t.update(pinchOf({ x: 0, y: 0 })).factor).toBe(1); // подняли палец
+    });
+
+    // Браузер присылает движение пальцев по одному: сначала сдвинулся один, потом второй.
+    function fingers() {
+        const a = { x: 0, y: 0 };
+        const b = { x: 100, y: 0 };
+        return { a, b, now: () => pinchOf({ ...a }, { ...b }) };
+    }
+
+    it('сдвиг двумя пальцами не включает масштаб, даже если расстояние плывёт и пальцы приходят по одному', () => {
+        const f = fingers();
+        const t = new PinchTracker();
+        t.begin(f.now());
+
+        let zoomSteps = 0;
+        for (let i = 0; i < 60; i++) {
+            f.a.x += 6; // палец A сдвинулся
+            if (t.update(f.now()).factor !== 1) zoomSteps++;
+            f.b.x += 6 + (i % 2 ? 1 : 0.5); // палец B догоняет и понемногу уходит вперёд: расстояние плывёт на десятки px
+            if (t.update(f.now()).factor !== 1) zoomSteps++;
+        }
+        expect(f.b.x - f.a.x - 100).toBeGreaterThan(PINCH_ENGAGE_PX); // дрейф действительно больше порога
+        expect(zoomSteps).toBe(0);
+        expect(t.isZooming).toBe(false);
+    });
+
+    it('настоящий щипок, когда пальцы приходят по одному, масштабирует в нужную сторону', () => {
+        const f = fingers();
+        const t = new PinchTracker();
+        t.begin(f.now());
+
+        let total = 1;
+        let wrongWay = 0;
+        for (let i = 0; i < 25; i++) {
+            f.a.x -= 4;
+            let k = t.update(f.now()).factor;
+            total *= k;
+            if (k < 1) wrongWay++;
+            f.b.x += 4;
+            k = t.update(f.now()).factor;
+            total *= k;
+            if (k < 1) wrongWay++;
+        }
+        expect(t.isZooming).toBe(true);
+        expect(wrongWay).toBe(0);
+        expect(total).toBeGreaterThan(1.5);
+    });
+
+    it('после щипка пальцы повезли вместе: масштаб выключается и не включается от дрейфа', () => {
+        const f = fingers();
+        const t = new PinchTracker();
+        t.begin(f.now());
+        for (let i = 0; i < 25; i++) {
+            f.a.x -= 4;
+            t.update(f.now());
+            f.b.x += 4;
+            t.update(f.now());
+        }
+        expect(t.isZooming).toBe(true);
+
+        let zoomAfter = 0;
+        for (let i = 0; i < 40; i++) {
+            f.a.x += 8;
+            if (t.update(f.now()).factor !== 1) zoomAfter++;
+            f.b.x += 8 + (i % 2 ? 0.7 : 0.3);
+            if (t.update(f.now()).factor !== 1) zoomAfter++;
+        }
+        expect(t.isZooming).toBe(false);
+        expect(zoomAfter).toBeLessThan(6); // допустимо пара шагов, пока окно «забывает» щипок
+    });
+
+    it('покоящиеся пальцы с дрожанием не включают масштаб, сколько бы дрейфа ни накопилось', () => {
+        const f = fingers();
+        const t = new PinchTracker();
+        t.begin(f.now());
+        for (let i = 0; i < 200; i++) {
+            f.b.x += i % 3 === 0 ? 0.8 : -0.1; // слабый шум со сдвигом в одну сторону (дрейф около 40 px на 200 шагов)
+            expect(t.update(f.now()).factor).toBe(1);
+        }
+        expect(f.b.x - f.a.x - 100).toBeGreaterThan(PINCH_ENGAGE_PX);
+        expect(t.isZooming).toBe(false);
     });
 });

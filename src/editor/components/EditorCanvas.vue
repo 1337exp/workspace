@@ -4,7 +4,8 @@ import type { Anchor, Side } from '@/core/types';
 import type { Rect, ResizeEdge } from '@/core/workspace';
 import { panBy, screenToWorld, zoomAt } from '../camera';
 import { edgeScrollVelocity } from '../edgescroll';
-import { LONG_PRESS_MS, TapRecognizer, pinchOf, pinchStep, type Pinch, type Sample } from '../gestures';
+import { LONG_PRESS_MS, PinchTracker, TapRecognizer, pinchOf, type Sample } from '../gestures';
+import { wheelIntent } from '../wheel';
 import { useEditor } from '../store';
 import ConnectionsLayer from './ConnectionsLayer.vue';
 import NodeView from './NodeView.vue';
@@ -13,7 +14,6 @@ const editor = useEditor();
 const root = ref<HTMLElement | null>(null);
 
 const GRID = 24;
-const ZOOM_SPEED = 0.0015;
 const PAN_CLICK_THRESHOLD = 4; // ПКМ, сдвинутая меньше, — это клик (открывает палитру)
 
 /** Всё, что нужно знать о положении указателя: годится и настоящее событие, и последнее известное положение. */
@@ -37,7 +37,7 @@ const touches = new Map<number, { x: number; y: number }>();
 const taps = new TapRecognizer();
 let longPressTimer: ReturnType<typeof setTimeout> | undefined;
 let lastTouchAt = 0;
-let pinch: Pinch = { cx: 0, cy: 0, dist: 0 };
+const pinch = new PinchTracker();
 
 /** `?debug=touch`: в углу видно последний распознанный жест и число пальцев. */
 const debug = typeof location !== 'undefined' && new URLSearchParams(location.search).get('debug') === 'touch';
@@ -262,9 +262,24 @@ function touchUp(e: PointerEvent): boolean {
     return false;
 }
 
+/** Набор пальцев изменился (лёг второй, подняли один): отсчёт жеста начинается заново, скачка нет. */
 function rebasePinch() {
     const [a, b] = [...touches.values()];
-    if (a) pinch = pinchOf(a, b);
+    if (a) pinch.begin(pinchOf(a, b));
+}
+
+/**
+ * Браузер присылает движение пальцев отдельными событиями: сдвинулся один палец, потом второй. Между ними расстояние
+ * между пальцами «дёргается», хотя жест один. Поэтому положение двух пальцев разбираем один раз за кадр, когда
+ * оба уже пришли.
+ */
+let pinchFrame = 0;
+function schedulePinch() {
+    if (pinchFrame) return;
+    pinchFrame = requestAnimationFrame(() => {
+        pinchFrame = 0;
+        if (mode === 'pinch') pinchMove();
+    });
 }
 
 /** Щипок и жест двумя пальцами; с одним оставшимся пальцем просто двигаем холст. */
@@ -273,11 +288,9 @@ function pinchMove() {
     const el = root.value;
     if (!a || !el) return;
 
-    const next = pinchOf(a, b);
-    const step = pinchStep(pinch, next);
+    const step = pinch.update(pinchOf(a, b));
     const rect = el.getBoundingClientRect();
     editor.camera = panBy(zoomAt(editor.camera, step.pivot[0] - rect.left, step.pivot[1] - rect.top, step.factor), step.pan[0], step.pan[1]);
-    pinch = next;
 }
 
 //--------------------------------------------------
@@ -473,7 +486,7 @@ function onPointerMove(e: PointerEvent) {
     if (touch) {
         if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (mode === 'pinch') {
-            pinchMove();
+            schedulePinch();
             return;
         }
         if (taps.move(sampleOf(e))) clearLongPress();
@@ -555,6 +568,7 @@ onUnmounted(() => {
     window.removeEventListener('pointercancel', purgeTouch);
     stopAutoScroll();
     clearLongPress();
+    cancelAnimationFrame(pinchFrame);
 });
 
 /**
@@ -610,9 +624,26 @@ function onDblClick(e: MouseEvent) {
     activateAt(e);
 }
 
+/**
+ * Колесо двигает холст, а масштаб только с Ctrl/Cmd (щипок тачпада приходит как Ctrl + колесо): так колесо над
+ * заметкой, которую можно прокрутить, не масштабирует холст, стоит курсору случайно выйти за её край.
+ */
 function onWheel(e: WheelEvent) {
-    const rect = root.value!.getBoundingClientRect();
-    editor.camera = zoomAt(editor.camera, e.clientX - rect.left, e.clientY - rect.top, Math.exp(-e.deltaY * ZOOM_SPEED));
+    const el = root.value!;
+    const zooming = e.ctrlKey || e.metaKey;
+
+    // Колесо над прокручиваемым полем (длинная заметка) листает его, а не двигает холст.
+    const field = (e.target as Element | null)?.closest('textarea');
+    if (!zooming && field && field.scrollHeight > field.clientHeight) return;
+
+    e.preventDefault();
+    const rect = el.getBoundingClientRect();
+    const intent = wheelIntent(e, rect.height);
+    if (intent.kind === 'zoom') {
+        editor.camera = zoomAt(editor.camera, e.clientX - rect.left, e.clientY - rect.top, intent.factor);
+    } else {
+        editor.camera = panBy(editor.camera, intent.dx, intent.dy);
+    }
 }
 </script>
 
@@ -628,7 +659,7 @@ function onWheel(e: WheelEvent) {
         @pointerup="onPointerUp"
         @pointercancel="onPointerCancel"
         @lostpointercapture="onLostCapture"
-        @wheel.prevent="onWheel"
+        @wheel="onWheel"
         @contextmenu.prevent
         @dblclick="onDblClick"
     >
