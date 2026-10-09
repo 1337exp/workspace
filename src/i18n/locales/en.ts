@@ -52,6 +52,19 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         noColor: 'No color',
         delete: 'Delete',
         selected: 'Selected: {0}',
+        straighten: 'Straighten',
+        straightenHint: 'Move a node so that the link becomes straight',
+        align: {
+            title: 'Alignment',
+            left: 'Align left edges',
+            hcenter: 'Align horizontal centers',
+            right: 'Align right edges',
+            top: 'Align top edges',
+            vmiddle: 'Align vertical middles',
+            bottom: 'Align bottom edges',
+            distributeX: 'Distribute horizontally (three or more nodes)',
+            distributeY: 'Distribute vertically (three or more nodes)',
+        },
         colors: {
             red: 'Red',
             yellow: 'Yellow',
@@ -60,6 +73,11 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
             blue: 'Blue',
             purple: 'Purple',
         },
+    },
+
+    grid: {
+        label: 'Grid',
+        hint: 'Snap to grid. Hold Alt to disable temporarily',
     },
 
     touch: {

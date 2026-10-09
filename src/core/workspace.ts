@@ -141,21 +141,38 @@ export interface Rect {
 /**
  * Прямоугольник после того, как грань `edge` сдвинули на (dx, dy) от стартового `start`.
  * Считаем от старта, а не накапливаем приращения: упёрлись в минимум и вернули мышь, грань идёт за курсором.
- * Противоположная грань стоит на месте.
+ * Противоположная грань стоит на месте. Если передан `snap`, двигаемая грань привязывается через него
+ * (до проверки минимума, поэтому минимальный размер он не нарушит).
  */
-export function resizeRect(start: Rect, edge: ResizeEdge, dx: number, dy: number, min: { w: number; h: number }): Rect {
-    const r = { ...start };
-    if (edge.includes('e')) r.w = Math.max(min.w, start.w + dx);
-    if (edge.includes('w')) {
-        r.w = Math.max(min.w, start.w - dx);
-        r.x = start.x + start.w - r.w;
+export function resizeRect(
+    start: Rect,
+    edge: ResizeEdge,
+    dx: number,
+    dy: number,
+    min: { w: number; h: number },
+    snap?: (value: number) => number,
+): Rect {
+    let left = start.x;
+    let top = start.y;
+    let right = start.x + start.w;
+    let bottom = start.y + start.h;
+
+    const s = snap ?? ((v: number) => v);
+    if (edge.includes('e')) right = s(right + dx);
+    if (edge.includes('w')) left = s(left + dx);
+    if (edge.includes('s')) bottom = s(bottom + dy);
+    if (edge.includes('n')) top = s(top + dy);
+
+    // Минимум: двигаемая грань упирается, противоположная стоит на месте.
+    if (right - left < min.w) {
+        if (edge.includes('e')) right = left + min.w;
+        else left = right - min.w;
     }
-    if (edge.includes('s')) r.h = Math.max(min.h, start.h + dy);
-    if (edge.includes('n')) {
-        r.h = Math.max(min.h, start.h - dy);
-        r.y = start.y + start.h - r.h;
+    if (bottom - top < min.h) {
+        if (edge.includes('s')) bottom = top + min.h;
+        else top = bottom - min.h;
     }
-    return r;
+    return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
 //--------------------------------------------------

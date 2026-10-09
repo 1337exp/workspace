@@ -54,6 +54,9 @@ async function onFile(e: Event) {
 
         <TaoButton variant="secondary" size="small" :disabled="!editor.canUndo" :title="t('history.undo')" @click="editor.undo()">↶</TaoButton>
         <TaoButton variant="secondary" size="small" :disabled="!editor.canRedo" :title="t('history.redo')" @click="editor.redo()">↷</TaoButton>
+        <TaoButton :variant="editor.snapEnabled ? 'primary' : 'secondary'" size="small" :title="t('grid.hint')" @click="editor.snapEnabled = !editor.snapEnabled">
+            <i class="icon-menu" />{{ t('grid.label') }}
+        </TaoButton>
 
         <span class="sep" />
 

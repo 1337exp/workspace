@@ -4,6 +4,7 @@ import type { Anchor, Side } from '@/core/types';
 import type { Rect, ResizeEdge } from '@/core/workspace';
 import { panBy, screenToWorld, zoomAt } from '../camera';
 import { edgeScrollVelocity } from '../edgescroll';
+import { GRID } from '../snap';
 import { LONG_PRESS_MS, PinchTracker, TapRecognizer, pinchOf, type Sample } from '../gestures';
 import { wheelIntent } from '../wheel';
 import { useEditor } from '../store';
@@ -13,7 +14,6 @@ import NodeView from './NodeView.vue';
 const editor = useEditor();
 const root = ref<HTMLElement | null>(null);
 
-const GRID = 24;
 const PAN_CLICK_THRESHOLD = 4; // ПКМ, сдвинутая меньше, — это клик (открывает палитру)
 
 /** Всё, что нужно знать о положении указателя: годится и настоящее событие, и последнее известное положение. */
@@ -25,6 +25,9 @@ let lastX = 0;
 let lastY = 0;
 let baseSelection: string[] = [];
 let panDistance = 0;
+/** Alt зажат: привязка к сетке временно отключена. Запоминаем, чтобы автопрокрутка (без события) тоже знала. */
+let altDown = false;
+const snapNow = () => editor.snapEnabled && !altDown;
 let resizeId = '';
 let resizeEdge: ResizeEdge = 'se';
 let resizeStart: Rect = { x: 0, y: 0, w: 0, h: 0 };
@@ -253,7 +256,7 @@ function commitArmed() {
     // Изменение размера выделяет только свою ноду; перетаскивание сохраняет выделение, если нода уже в нём.
     if (mode === 'resize' || !editor.selection.has(id)) editor.setSelection([id]);
     editor.raise(id);
-    if (mode === 'drag') editor.beginDrag();
+    if (mode === 'drag') editor.beginDrag(id);
 }
 
 /** Палец поднят. Возвращает true, если событие обработано целиком (идёт щипок). */
@@ -334,6 +337,7 @@ function pinchMove() {
 function onPointerDown(e: PointerEvent) {
     const el = root.value;
     if (!el) return;
+    altDown = e.altKey;
 
     const touch = e.pointerType === 'touch';
     if (touch && touchDown(e)) return; // второй палец: щипок
@@ -404,12 +408,12 @@ function onPointerDown(e: PointerEvent) {
             if (additive) {
                 editor.toggleSelected(id);
                 if (!editor.selection.has(id)) return;
-                editor.beginDrag();
+                editor.beginDrag(id);
             } else if (touch) {
                 armed = id; // выделение и beginDrag: в commitArmed, когда палец пошёл тянуть
             } else {
                 if (!editor.selection.has(id)) editor.setSelection([id]);
-                editor.beginDrag();
+                editor.beginDrag(id);
             }
             mode = 'drag';
         } else if (touch && !editor.selectMode && !doubleDown) {
@@ -520,11 +524,11 @@ function autoScrollFrame(now: number) {
 
     const pointer: Pointer = { clientX: lastX, clientY: lastY };
     if (mode === 'drag') {
-        editor.moveSelected(sx / z, sy / z);
+        editor.moveSelected(sx / z, sy / z, snapNow());
     } else if (mode === 'resize') {
         resizeDx += sx / z;
         resizeDy += sy / z;
-        editor.resizeFrom(resizeId, resizeEdge, resizeStart, resizeDx, resizeDy);
+        editor.resizeFrom(resizeId, resizeEdge, resizeStart, resizeDx, resizeDy, snapNow());
     } else if (mode === 'connect') {
         editor.updateConnect(cursorWorld(pointer), anchorAt(pointer));
     } else if (mode === 'marquee' && marquee.value) {
@@ -538,6 +542,7 @@ function autoScrollFrame(now: number) {
 }
 
 function onPointerMove(e: PointerEvent) {
+    altDown = e.altKey;
     const touch = e.pointerType === 'touch';
     if (touch) {
         if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -564,11 +569,11 @@ function onPointerMove(e: PointerEvent) {
         panDistance += Math.hypot(dx, dy);
         editor.camera = panBy(editor.camera, dx, dy);
     } else if (mode === 'drag') {
-        editor.moveSelected(dx / editor.camera.z, dy / editor.camera.z);
+        editor.moveSelected(dx / editor.camera.z, dy / editor.camera.z, snapNow());
     } else if (mode === 'resize') {
         resizeDx += dx / editor.camera.z;
         resizeDy += dy / editor.camera.z;
-        editor.resizeFrom(resizeId, resizeEdge, resizeStart, resizeDx, resizeDy);
+        editor.resizeFrom(resizeId, resizeEdge, resizeStart, resizeDx, resizeDy, snapNow());
     } else if (mode === 'connect') {
         editor.updateConnect(cursorWorld(e), anchorAt(e));
     } else if (mode === 'marquee' && marquee.value) {
