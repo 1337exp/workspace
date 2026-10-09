@@ -1,0 +1,187 @@
+<script lang="ts" setup>
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { TaoButton, TaoSegmented, TaoSegmentedOption } from '@1337exp/taoui';
+import { NODE_COLORS, type NodeColor } from '@/core/colors';
+import type { Arrow } from '@/core/types';
+import { useI18n } from '@/i18n';
+import { useEditor } from '../store';
+import { coarse } from '../touch';
+
+/**
+ * Панель действий над выделенным, закреплённая у нижнего края экрана. Не привязана к ноде и не зависит от
+ * масштаба, одинаково работает мышью и пальцем, действие применяется ко всем выделенным. Показывается, пока
+ * выделена хотя бы нода или связь.
+ */
+const editor = useEditor();
+const { t } = useI18n();
+
+const link = computed(() => editor.workspace.connections.find((c) => c.id === editor.selectedConnection) ?? null);
+const nodeCount = computed(() => editor.selection.size);
+const hasSelection = computed(() => nodeCount.value > 0 || link.value !== null);
+const canColor = computed(() => editor.colorable.length > 0);
+const arrow = computed<Arrow>(() => link.value?.arrow ?? 'none');
+
+// Экранная клавиатура на сенсоре закрыла бы панель, поэтому на время набора текста она прячется.
+const bar = ref<HTMLElement | null>(null);
+const typing = ref(false);
+function onFocusChange() {
+    const el = document.activeElement;
+    const field = el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
+    typing.value = field && !bar.value?.contains(el);
+}
+onMounted(() => {
+    window.addEventListener('focusin', onFocusChange);
+    window.addEventListener('focusout', onFocusChange);
+});
+onUnmounted(() => {
+    window.removeEventListener('focusin', onFocusChange);
+    window.removeEventListener('focusout', onFocusChange);
+});
+
+const visible = computed(() => hasSelection.value && !(coarse.value && typing.value));
+
+const active = (color: NodeColor | null) => editor.selectionColor === color;
+
+function setArrow(value: unknown) {
+    if (value === 'none' || value === 'end') editor.setArrowStyle(value);
+}
+</script>
+
+<template>
+    <div v-if="visible" ref="bar" class="context" @pointerdown.stop @wheel.stop @contextmenu.prevent>
+        <template v-if="canColor">
+            <span v-if="nodeCount > 1" class="count">{{ t('context.selected', [nodeCount]) }}</span>
+
+            <div class="swatches" role="group" :aria-label="t('context.color')">
+                <button
+                    class="swatch none"
+                    :class="{ active: active(null) }"
+                    :title="t('context.noColor')"
+                    :aria-label="t('context.noColor')"
+                    @click="editor.setColor(null)"
+                />
+                <button
+                    v-for="color in NODE_COLORS"
+                    :key="color"
+                    class="swatch"
+                    :class="{ active: active(color) }"
+                    :style="{ '--swatch': `var(--tint-${color})` }"
+                    :title="t(`context.colors.${color}`)"
+                    :aria-label="t(`context.colors.${color}`)"
+                    @click="editor.setColor(color)"
+                />
+            </div>
+        </template>
+
+        <template v-if="link">
+            <TaoSegmented :model-value="arrow" size="small" @update:model-value="setArrow">
+                <TaoSegmentedOption value="none">{{ t('link.line') }}</TaoSegmentedOption>
+                <TaoSegmentedOption value="end">{{ t('link.arrow') }} →</TaoSegmentedOption>
+            </TaoSegmented>
+            <TaoButton variant="secondary" size="small" @click="editor.reverseSelected()">
+                <i class="icon-shuffle" />{{ t('link.reverse') }}
+            </TaoButton>
+        </template>
+
+        <span v-if="canColor || link" class="sep" />
+
+        <TaoButton variant="danger" size="small" @click="editor.removeSelected()">
+            <i class="icon-trash-1" />{{ t('context.delete') }}
+        </TaoButton>
+    </div>
+</template>
+
+<style scoped>
+.context {
+    position: absolute;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    /* По центру без transform: при left: 50% доступная ширина всего половина контейнера, и панель сворачивалась бы в несколько рядов. */
+    left: 12px;
+    right: 12px;
+    margin-inline: auto;
+    width: max-content;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    max-width: calc(100% - 24px);
+    padding: 8px 12px;
+    border: 1px solid var(--tao-color-border-strong, #4b5563);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--tao-color-surface-raised, #1f2937) 96%, transparent);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.count {
+    color: var(--tao-color-text-muted, #9ca3af);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.swatches {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.swatch {
+    position: relative;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: var(--swatch);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.swatch:hover {
+    transform: scale(1.12);
+}
+
+.swatch.active {
+    border-color: var(--tao-color-text-strong, #fff);
+    box-shadow: 0 0 0 2px var(--tao-color-accent, #f59e0b);
+}
+
+/* «Без цвета»: пустой кружок с чертой. */
+.swatch.none {
+    border-color: var(--tao-color-text-muted, #9ca3af);
+    background: transparent;
+}
+
+.swatch.none::after {
+    content: '';
+    position: absolute;
+    inset: 50% 3px auto 3px;
+    height: 2px;
+    background: var(--tao-color-text-muted, #9ca3af);
+    transform: rotate(-45deg);
+}
+
+.swatch.none.active {
+    border-color: var(--tao-color-text-strong, #fff);
+}
+
+.sep {
+    width: 1px;
+    height: 22px;
+    background: var(--tao-color-border-strong, #4b5563);
+}
+
+/* Палец крупнее курсора. */
+@media (pointer: coarse) {
+    .swatch {
+        width: 34px;
+        height: 34px;
+    }
+
+    .swatches {
+        gap: 8px;
+    }
+}
+</style>

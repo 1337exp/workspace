@@ -47,10 +47,24 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         empty: 'Nothing found',
     },
 
+    context: {
+        color: 'Color',
+        noColor: 'No color',
+        delete: 'Delete',
+        selected: 'Selected: {0}',
+        colors: {
+            red: 'Red',
+            yellow: 'Yellow',
+            green: 'Green',
+            cyan: 'Cyan',
+            blue: 'Blue',
+            purple: 'Purple',
+        },
+    },
+
     touch: {
         select: 'Select',
         selectHint: 'Select mode: one finger draws a box, tapping a node adds it to the selection',
-        delete: 'Delete',
     },
 
     nodes: {

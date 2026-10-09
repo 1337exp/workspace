@@ -24,6 +24,7 @@ export function addNode(
         h: init.h ?? def.size.h,
         dataVersion: dataVersionOf(def),
         data: { ...def.create(), ...init.data },
+        ...(init.color ? { color: init.color } : {}),
     };
     if (ws.nodes[node.id]) throw new Error(`Нода с id "${node.id}" уже есть`);
 

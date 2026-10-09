@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
-import { markRaw, reactive, ref } from 'vue';
+import { computed, markRaw, reactive, ref } from 'vue';
+import { isNodeColor, type NodeColor } from '@/core/colors';
 import { parse, serialize, type LoadError, type SavedView } from '@/core/serialize';
 import type { Anchor, Arrow, NodeData, Workspace } from '@/core/types';
 import type { Rect, ResizeEdge } from '@/core/workspace';
@@ -154,6 +155,30 @@ export const useEditor = defineStore('editor', () => {
             else removeNode(workspace.value, id);
         }
         selection.clear();
+    }
+
+    /** Выделенные ноды, которые можно красить (точки на связях нет: у них нет рамки и полосы). */
+    const colorable = computed(() =>
+        [...selection].filter((id) => {
+            const node = workspace.value.nodes[id];
+            return node !== undefined && !registry.find(node.type)?.point;
+        }),
+    );
+
+    /** Цвет выделенных нод: общий (`null` — обычный), либо `'mixed'`, если у них разные. */
+    const selectionColor = computed<NodeColor | null | 'mixed'>(() => {
+        const colors = new Set(colorable.value.map((id) => workspace.value.nodes[id]!.color).map((c) => (isNodeColor(c) ? c : null)));
+        if (colors.size !== 1) return colors.size === 0 ? null : 'mixed';
+        return [...colors][0]!;
+    });
+
+    /** Красит выделенные ноды; `null` возвращает обычный цвет. */
+    function setColor(color: NodeColor | null) {
+        for (const id of colorable.value) {
+            const node = workspace.value.nodes[id]!;
+            if (color) node.color = color;
+            else delete node.color;
+        }
     }
 
     /** Двойной клик по связи: ставит в эту точку ноду-точку и выделяет её. */
@@ -469,6 +494,9 @@ export const useEditor = defineStore('editor', () => {
         moveSelected,
         resizeFrom,
         removeSelected: recorded(removeSelected),
+        colorable,
+        selectionColor,
+        setColor: recorded(setColor),
         splitConnection: recorded(splitConnection),
         patchData: recorded(patchData, (id) => `data:${id}`),
         setArrowStyle: recorded(setArrowStyle),

@@ -44,10 +44,24 @@ export default {
         empty: 'Ничего не найдено',
     },
 
+    context: {
+        color: 'Цвет',
+        noColor: 'Без цвета',
+        delete: 'Удалить',
+        selected: 'Выбрано: {0}',
+        colors: {
+            red: 'Красный',
+            yellow: 'Жёлтый',
+            green: 'Зелёный',
+            cyan: 'Голубой',
+            blue: 'Синий',
+            purple: 'Фиолетовый',
+        },
+    },
+
     touch: {
         select: 'Выделение',
         selectHint: 'Режим выделения: рамка одним пальцем, тап по ноде добавляет её к выделению',
-        delete: 'Удалить',
     },
 
     nodes: {

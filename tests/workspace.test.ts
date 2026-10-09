@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isNodeColor } from '@/core/colors';
 import { defineNode } from '@/core/define';
 import { Registry } from '@/core/registry';
 import { parse, serialize } from '@/core/serialize';
@@ -338,5 +339,34 @@ describe('порядок отрисовки', () => {
         raiseToFront(ws, 'a');
         const result = parse(serialize(ws), registry);
         expect(result.ok && Object.keys(result.workspace.nodes)).toEqual(['b', 'c', 'a']);
+    });
+});
+
+describe('цвет ноды', () => {
+    const registry = createDefaultRegistry();
+
+    it('цвет сохраняется и читается, у обычной ноды его нет', () => {
+        const ws = createWorkspace();
+        addNode(ws, registry, 'note', { id: 'a', color: 'blue' });
+        addNode(ws, registry, 'note', { id: 'b' });
+
+        const text = serialize(ws);
+        expect(JSON.parse(text).nodes.map((n: { color?: string }) => n.color)).toEqual(['blue', undefined]);
+
+        const result = parse(text, registry);
+        expect(result.ok && [result.workspace.nodes.a!.color, 'color' in result.workspace.nodes.b!]).toEqual(['blue', false]);
+    });
+
+    it('неизвестное имя цвета сохраняется как есть (рисоваться оно не будет)', () => {
+        const text = JSON.stringify({
+            format: 'workspace',
+            version: 1,
+            nodes: [{ id: 'a', type: 'note', x: 0, y: 0, w: 100, h: 80, dataVersion: 1, data: { text: '' }, color: 'neon-future' }],
+            connections: [],
+        });
+        const result = parse(text, registry);
+        expect(result.ok && result.workspace.nodes.a!.color).toBe('neon-future');
+        expect(isNodeColor('neon-future')).toBe(false);
+        expect(isNodeColor('red')).toBe(true);
     });
 });

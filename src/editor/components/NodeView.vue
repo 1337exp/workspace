@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed, nextTick, ref, watch } from 'vue';
 import type { NodeData, NodeInstance } from '@/core/types';
+import { isNodeColor } from '@/core/colors';
 import { SIDES, type ResizeEdge } from '@/core/workspace';
 
 const EDGES: readonly ResizeEdge[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
@@ -23,6 +24,15 @@ const targetSide = computed(() => {
 const targetValid = computed(() => editor.pending?.valid !== false);
 
 const onChange = (patch: NodeData) => editor.patchData(props.node.id, patch);
+
+/** Цвет ноды (если известный): CSS-переменная `--tint` тонирует рамку и полосу (у группы ещё и заливку). */
+const tint = computed(() => (isNodeColor(props.node.color) ? props.node.color : null));
+const nodeStyle = computed(() => ({
+    transform: `translate(${props.node.x}px, ${props.node.y}px)`,
+    width: `${props.node.w}px`,
+    height: `${props.node.h}px`,
+    ...(tint.value ? { '--tint': `var(--tint-${tint.value})` } : {}),
+}));
 
 //--------------------------------------------------
 // Название в полосе: берётся из поля data (если нода его объявила) и правится двойным кликом по полосе.
@@ -59,7 +69,7 @@ function finishTitle(save: boolean) {
         class="node point"
         :class="{ selected }"
         :data-node-id="node.id"
-        :style="{ transform: `translate(${node.x}px, ${node.y}px)`, width: `${node.w}px`, height: `${node.h}px` }"
+        :style="nodeStyle"
     >
         <span class="ring" data-pin="auto" />
         <span class="knob" />
@@ -68,9 +78,9 @@ function finishTitle(save: boolean) {
     <div
         v-else
         class="node"
-        :class="{ selected, unknown: !def, container: def?.container }"
+        :class="{ selected, unknown: !def, container: def?.container, tinted: tint }"
         :data-node-id="node.id"
-        :style="{ transform: `translate(${node.x}px, ${node.y}px)`, width: `${node.w}px`, height: `${node.h}px` }"
+        :style="nodeStyle"
     >
         <div class="frame">
             <header class="bar">
@@ -183,7 +193,7 @@ function finishTitle(save: boolean) {
     height: 32px;
     padding: 0 12px;
     background: var(--tao-color-surface-hover, #374151);
-    color: var(--tao-color-text-muted, #9ca3af);
+    color: var(--tao-color-text, #e5e7eb);
     font-size: 13px;
     cursor: grab;
     user-select: none;
@@ -199,12 +209,6 @@ function finishTitle(save: boolean) {
     height: 8px;
     border-radius: 50%;
     background: var(--tao-color-text-muted, #9ca3af);
-    transition: background 0.12s;
-}
-
-.node:hover .grip,
-.node.selected .grip {
-    background: var(--tao-color-accent, #f59e0b);
 }
 
 .title-input {
@@ -219,20 +223,6 @@ function finishTitle(save: boolean) {
     outline: none;
 }
 
-/* У рамки полоса полупрозрачная, поэтому точка и название белые: иначе их плохо видно. */
-.node.container .bar {
-    color: var(--tao-color-text-strong, #fff);
-}
-
-.node.container .grip {
-    background: var(--tao-color-text-strong, #fff);
-}
-
-.node.container:hover .grip,
-.node.container.selected .grip {
-    background: var(--tao-color-accent, #f59e0b);
-}
-
 /* Контейнер (группа): полупрозрачная рамка под всем остальным; тело пропускает клики, ловят только полоса, пины и угол. */
 .node.container {
     pointer-events: none;
@@ -244,19 +234,16 @@ function finishTitle(save: boolean) {
     pointer-events: auto;
 }
 
+/* Группа без цвета нейтральная, как остальные ноды: акцент занят выделением и не должен путаться с цветом из палитры. */
 .node.container .frame {
-    border: 1px dashed color-mix(in srgb, var(--tao-color-accent, #f59e0b) 55%, transparent);
-    background: color-mix(in srgb, var(--tao-color-accent, #f59e0b) 5%, transparent);
+    border: 1px dashed var(--tao-color-border-strong, #4b5563);
+    background: color-mix(in srgb, var(--tao-color-text-strong, #fff) 3%, transparent);
     box-shadow: none;
 }
 
 .node.container.selected .frame {
     border-style: solid;
     border-color: var(--tao-color-accent, #f59e0b);
-}
-
-.node.container .bar {
-    background: color-mix(in srgb, var(--tao-color-accent, #f59e0b) 14%, var(--tao-color-surface-raised, #1f2937));
 }
 
 .title {
@@ -396,6 +383,36 @@ function finishTitle(save: boolean) {
 /* Пины всех нод видны, пока тянется связь. */
 :global(.canvas.connecting) .dot {
     opacity: 1;
+}
+
+/* Цвет ноды: тонирование рамки и полосы. Выделение остаётся акцентным и поверх цвета. */
+.node.tinted .frame {
+    border-color: color-mix(in srgb, var(--tint) 70%, transparent);
+}
+
+.node.tinted .bar {
+    background: color-mix(in srgb, var(--tint) 24%, var(--tao-color-surface-hover, #374151));
+}
+
+.node.tinted .grip {
+    background: var(--tint);
+}
+
+.node.tinted.selected .frame {
+    border-color: var(--tao-color-accent, #f59e0b);
+}
+
+.node.container.tinted .frame {
+    border-color: color-mix(in srgb, var(--tint) 65%, transparent);
+    background: color-mix(in srgb, var(--tint) 6%, transparent);
+}
+
+.node.container.tinted .bar {
+    background: color-mix(in srgb, var(--tint) 24%, var(--tao-color-surface-raised, #1f2937));
+}
+
+.node.container.tinted.selected .frame {
+    border-color: var(--tao-color-accent, #f59e0b);
 }
 
 /* Нода-точка */

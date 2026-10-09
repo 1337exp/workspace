@@ -16,8 +16,6 @@ const selectedLink = computed(() => editor.workspace.connections.find((c) => c.i
 /** Показываем вид выбранной связи, а без выбора — вид новых связей. */
 const arrow = computed<Arrow>(() => selectedLink.value?.arrow ?? editor.defaultArrow);
 
-const hasSelection = computed(() => editor.selection.size > 0 || editor.selectedConnection !== null);
-
 function setArrow(value: unknown) {
     if (value === 'none' || value === 'end') editor.setArrowStyle(value);
 }
@@ -81,9 +79,6 @@ async function onFile(e: Event) {
             >
                 <i class="icon-dot-circled" />{{ t('touch.select') }}
             </TaoButton>
-            <TaoButton variant="secondary" size="small" :disabled="!hasSelection" @click="editor.removeSelected()">
-                <i class="icon-trash-1" />{{ t('touch.delete') }}
-            </TaoButton>
         </template>
 
         <span class="sep" />
@@ -98,19 +93,22 @@ async function onFile(e: Event) {
 .toolbar {
     position: absolute;
     top: 12px;
-    left: 50%;
+    /* По центру без transform: при left: 50% доступная ширина всего половина контейнера. */
+    left: 16px;
+    right: 16px;
+    margin-inline: auto;
+    width: max-content;
+    max-width: calc(100% - 32px);
     z-index: 10;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 4px;
-    max-width: calc(100% - 32px);
     padding: 6px 10px;
     border: 1px solid var(--tao-color-border-strong, #4b5563);
     border-radius: 10px;
     background: color-mix(in srgb, var(--tao-color-surface-raised, #1f2937) 96%, transparent);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-    transform: translateX(-50%);
 }
 
 .sep {

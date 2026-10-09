@@ -52,6 +52,8 @@ export interface NodeInstance {
     /** Версия формата `data`, с которой оно было записано. */
     dataVersion: number;
     data: NodeData;
+    /** Цвет ноды (имя из `NODE_COLORS`). Не задан — обычный. Неизвестное имя сохраняется как есть, но не рисуется. */
+    color?: string;
 }
 
 export type Side = 'left' | 'right' | 'top' | 'bottom';

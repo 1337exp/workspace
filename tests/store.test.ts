@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { linkShape } from '@/editor/curve';
+import { HEAD_MIN_PX, headSizePx, linkShape } from '@/editor/curve';
 import { useEditor } from '@/editor/store';
 import { isImageUrl } from '@/nodes/image/url';
 
@@ -101,9 +101,23 @@ describe('linkShape', () => {
         expect(right.head).toMatch(/^M 200 0 L 214 /);
     });
 
-    it('размер наконечника на экране не зависит от масштаба', () => {
+    it('при зуме 1 и ближе наконечник 14 px на экране', () => {
         const head = linkShape([0, 0], 'right', [200, 0], 'left', 'end', 2).head!;
         expect(head).toMatch(/^M 200 0 L 193 /); // 14px экрана = 7 мировых единиц при zoom 2
+        expect(headSizePx(1)).toBe(14);
+        expect(headSizePx(3)).toBe(14);
+    });
+
+    it('при отдалении наконечник плавно уменьшается, но не мельче порога', () => {
+        const sizes = [1, 0.7, 0.5, 0.3, 0.2, 0.1].map(headSizePx);
+        for (let i = 1; i < sizes.length; i++) expect(sizes[i]!).toBeLessThanOrEqual(sizes[i - 1]!);
+        expect(headSizePx(0.5)).toBeCloseTo(9.9, 1);
+        expect(headSizePx(0.2)).toBeCloseTo(6.26, 1);
+        expect(headSizePx(0.05)).toBe(HEAD_MIN_PX);
+
+        // и в мировых единицах это размер на экране, делённый на масштаб
+        const head = linkShape([0, 0], 'right', [200, 0], 'left', 'end', 0.2).head!;
+        expect(head).toMatch(/^M 200 0 L 168\.69/); // 6.26 / 0.2 = 31.3 мировых единиц
     });
 });
 
@@ -263,5 +277,58 @@ describe('подъём ноды', () => {
 
         editor.raise(a);
         expect(editor.canRedo).toBe(true);
+    });
+});
+
+describe('цвет выделенных нод', () => {
+    beforeEach(() => setActivePinia(createPinia()));
+
+    function scene() {
+        const editor = useEditor();
+        editor.loadWorkspace({ nodes: {}, connections: [] }, undefined, true);
+        const a = editor.addNodeAtCenter('note').id;
+        const b = editor.addNodeAtCenter('image').id;
+        const c = editor.addNodeAtCenter('note').id;
+        return { editor, a, b, c };
+    }
+
+    it('красит все выделенные ноды и снимает цвет', () => {
+        const { editor, a, b, c } = scene();
+        editor.setSelection([a, b]);
+        editor.setColor('green');
+        expect([editor.workspace.nodes[a]!.color, editor.workspace.nodes[b]!.color, editor.workspace.nodes[c]!.color]).toEqual(['green', 'green', undefined]);
+        expect(editor.selectionColor).toBe('green');
+
+        editor.setColor(null);
+        expect('color' in editor.workspace.nodes[a]!).toBe(false);
+        expect(editor.selectionColor).toBeNull();
+    });
+
+    it('у разных цветов выделение даёт «смешанный» цвет, undo возвращает прежний', () => {
+        const { editor, a, b } = scene();
+        editor.setSelection([a]);
+        editor.setColor('red');
+        editor.setSelection([a, b]);
+        expect(editor.selectionColor).toBe('mixed');
+
+        editor.setColor('blue');
+        editor.undo();
+        expect(editor.workspace.nodes[a]!.color).toBe('red');
+        expect(editor.workspace.nodes[b]!.color).toBeUndefined();
+    });
+
+    it('ноды-точки не красятся и в «красимых» не числятся', () => {
+        const { editor, a, b } = scene();
+        editor.startConnect({ node: a, side: 'right' }, [0, 0]);
+        editor.finishConnect({ node: b, side: 'left' });
+        const point = editor.splitConnection(editor.workspace.connections[0]!.id, [100, 100])!;
+
+        editor.setSelection([point.id]);
+        expect(editor.colorable).toEqual([]);
+        editor.setColor('red');
+        expect(editor.workspace.nodes[point.id]!.color).toBeUndefined();
+
+        editor.setSelection([point.id, a]);
+        expect(editor.colorable).toEqual([a]);
     });
 });

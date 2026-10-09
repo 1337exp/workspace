@@ -5,8 +5,18 @@ type Point = readonly [number, number];
 /** Куда смотрит наружу пин на данной стороне ноды. */
 const OUT: Record<Side, Point> = { left: [-1, 0], right: [1, 0], top: [0, -1], bottom: [0, 1] };
 
-/** Размер наконечника стрелки на экране, px. */
-const HEAD_SIZE_PX = 14;
+/** Размер наконечника стрелки на экране: крупнейший (при зуме 1 и ближе) и мельчайший (при сильном отдалении), px. */
+export const HEAD_MAX_PX = 14;
+export const HEAD_MIN_PX = 6;
+
+/**
+ * Размер наконечника на экране при масштабе камеры `zoom`. Постоянные 14 px при отдалении выглядели огромными
+ * рядом с уменьшившимися нодами (при зуме 0.2 заметка 48 px, и стрелка занимала треть её ширины), поэтому он
+ * уменьшается плавно (корень из масштаба), но не мельче `HEAD_MIN_PX`, чтобы стрелка оставалась читаемой.
+ */
+export function headSizePx(zoom: number): number {
+    return Math.min(HEAD_MAX_PX, Math.max(HEAD_MIN_PX, HEAD_MAX_PX * Math.sqrt(zoom)));
+}
 const MIN_TENSION = 60;
 
 export interface LinkShape {
@@ -42,7 +52,7 @@ export function linkShape(a: Point, aSide: Side, b: Point, bSide: Side, arrow: A
     // Стрелка смотрит в ноду, то есть против «наружу» пина. Линию заканчиваем внутри наконечника.
     const dx = -bx;
     const dy = -by;
-    const size = HEAD_SIZE_PX / zoom;
+    const size = headSizePx(zoom) / zoom; // в мировых единицах
     const end: Point = [b[0] - dx * size * 0.8, b[1] - dy * size * 0.8];
     const base: Point = [b[0] - dx * size, b[1] - dy * size];
     const half = size * 0.45;

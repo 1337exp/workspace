@@ -57,13 +57,23 @@ function upgrade(node: NodeInstance, registry: Registry): void {
 
 function readNode(raw: unknown, registry: Registry): NodeInstance | string {
     if (!isObject(raw)) return 'node';
-    const { id, type, x, y, w, h, dataVersion, data } = raw;
+    const { id, type, x, y, w, h, dataVersion, data, color } = raw;
     if (typeof id !== 'string' || id === '') return 'node.id';
     if (typeof type !== 'string') return `${id}.type`;
     if (!isNum(x) || !isNum(y) || !isNum(w) || !isNum(h) || w <= 0 || h <= 0) return `${id}.geometry`;
     if (!isObject(data)) return `${id}.data`;
 
-    const node: NodeInstance = { id, type, x, y, w, h, dataVersion: isNum(dataVersion) ? dataVersion : 1, data: data as NodeData };
+    const node: NodeInstance = {
+        id,
+        type,
+        x,
+        y,
+        w,
+        h,
+        dataVersion: isNum(dataVersion) ? dataVersion : 1,
+        data: data as NodeData,
+        ...(typeof color === 'string' && color !== '' ? { color } : {}),
+    };
     upgrade(node, registry);
     return node;
 }

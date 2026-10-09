@@ -2,6 +2,7 @@
 import { useI18n } from '@/i18n';
 import EditorCanvas from '@/editor/components/EditorCanvas.vue';
 import NodePalette from '@/editor/components/NodePalette.vue';
+import ContextBar from '@/editor/components/ContextBar.vue';
 import ToolBar from '@/editor/components/ToolBar.vue';
 import { useEditor } from '@/editor/store';
 
@@ -13,6 +14,7 @@ const { t } = useI18n();
     <div class="app">
         <EditorCanvas />
         <ToolBar />
+        <ContextBar />
         <NodePalette />
         <div v-if="editor.notice" class="notice" :class="editor.notice.kind">
             {{ t(editor.notice.key, editor.notice.args) }}
@@ -29,7 +31,7 @@ const { t } = useI18n();
 
 .notice {
     position: absolute;
-    bottom: 16px;
+    bottom: 84px; /* над нижней панелью действий */
     left: 50%;
     z-index: 30;
     padding: 8px 14px;
