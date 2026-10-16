@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, markRaw, reactive, ref, watch } from 'vue';
 import { alignNodes, distributeNodes, straightenLink, type AlignKind, type DistributeAxis } from '@/core/align';
 import { isNodeColor, type NodeColor } from '@/core/colors';
-import { parse, serialize, type LoadError, type SavedView } from '@/core/serialize';
+import { parse, serialize } from '@/core/serialize';
 import type { Anchor, Arrow, NodeData, Workspace } from '@/core/types';
 import type { Rect, ResizeEdge } from '@/core/workspace';
 import {
@@ -23,23 +23,17 @@ import {
     setArrow,
     splitConnection as split,
 } from '@/core/workspace';
-import type { MessageArgs, MessageKey } from '@/i18n';
+import type { MessageKey } from '@/i18n';
 import { createDefaultRegistry } from '@/nodes';
-import { createCamera, MAX_ZOOM, MIN_ZOOM, screenToWorld, type Camera } from '@1337exp/taoux/camera';
+import { createCamera, screenToWorld, type Camera } from '@1337exp/taoux/camera';
 import { GRID, snapThreshold, softSnap } from '@1337exp/taoux/snap';
 import { createDemo } from './demo';
-import { History } from '@1337exp/taoux/history';
-import { backupBroken, readSaved, writeSaved } from './persistence';
+import { createDocumentSession, type SessionNotice } from '@1337exp/taoux/session';
+import { storage } from './persistence';
 
 /** Короткое сообщение пользователю (результат открытия файла и т.п.). Хранит ключ перевода. */
-export interface Notice {
-    kind: 'info' | 'error';
-    key: MessageKey;
-    args?: MessageArgs;
-}
+export type Notice = SessionNotice<MessageKey>;
 
-const NOTICE_MS = 5000;
-const AUTOSAVE_DELAY_MS = 400;
 const FALLBACK_MIN = { w: 100, h: 60 };
 
 /** Связь, которую пользователь сейчас протягивает. */
@@ -325,170 +319,49 @@ export const useEditor = defineStore('editor', () => {
     }
 
     //---]>
-    // уведомления, файлы, автосохранение
+    // документ: история, автосохранение, файлы (механика в taoux/session)
 
-    const notice = ref<Notice | null>(null);
-    let noticeTimer: ReturnType<typeof setTimeout> | undefined;
-
-    function showNotice(kind: Notice['kind'], key: MessageKey, args?: MessageArgs) {
-        notice.value = { kind, key, args };
-        clearTimeout(noticeTimer);
-        noticeTimer = setTimeout(() => (notice.value = null), NOTICE_MS);
-    }
-
-    let autosaveOn = false;
-    let saveTimer: ReturnType<typeof setTimeout> | undefined;
-    let saveFailedShown = false;
-
-    /** Записывает пространство и положение камеры в localStorage. */
-    function flushSave() {
-        clearTimeout(saveTimer);
-        saveTimer = undefined;
-        if (!autosaveOn) return;
-
-        if (writeSaved(serialize(workspace.value, camera.value, false))) {
-            saveFailedShown = false;
-        } else if (!saveFailedShown) {
-            saveFailedShown = true; // сообщаем один раз, а не при каждой правке
-            showNotice('error', 'file.error.saveFailed');
-        }
-    }
-
-    function scheduleSave() {
-        if (!autosaveOn) return;
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(flushSave, AUTOSAVE_DELAY_MS);
-    }
-
-    /**
-     * Включает автосохранение. Выключено по умолчанию (в тестах и до восстановления ничего не пишется).
-     * Правки сохраняются с небольшой задержкой, а при скрытии вкладки и закрытии — сразу.
-     * Возвращает функцию, которая всё отключает.
-     */
-    function startAutosave(): () => void {
-        autosaveOn = true;
-        const onHide = () => {
-            if (document.visibilityState === 'hidden') flushSave();
-        };
-        window.addEventListener('pagehide', flushSave);
-        document.addEventListener('visibilitychange', onHide);
-
-        return () => {
-            autosaveOn = false;
-            clearTimeout(saveTimer);
-            window.removeEventListener('pagehide', flushSave);
-            document.removeEventListener('visibilitychange', onHide);
-        };
-    }
-
-    /** Подменяет пространство целиком. Без `resetHistory` это обычная правка: её можно отменить. */
-    function loadWorkspace(next: Workspace, view?: SavedView, resetHistory = false) {
-        workspace.value = next;
-        selection.clear();
-        selectedConnection.value = null;
-        pending.value = null;
-        palette.value = null;
-        if (view) camera.value = { x: view.x, y: view.y, z: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, view.z)) };
-
-        if (resetHistory) {
-            history.reset(snapshot());
-            syncHistory();
-        } else {
-            commit();
-        }
-    }
-
-    /** Текст файла для скачивания. */
-    const exportText = () => serialize(workspace.value, camera.value);
-
-    function errorNotice(error: LoadError): Notice {
-        const detail = error.detail === undefined ? undefined : [error.detail];
-        return { kind: 'error', key: `file.error.${error.code}`, args: detail };
-    }
-
-    /** Открывает пространство из текста файла. При ошибке ничего не меняется. Результат показывается уведомлением. */
-    function importText(text: string): LoadError | null {
-        const result = parse(text, registry);
-        if (!result.ok) {
-            const n = errorNotice(result.error);
-            showNotice(n.kind, n.key, n.args);
-            return result.error;
-        }
-
-        loadWorkspace(result.workspace, result.view);
-        const nodes = Object.keys(result.workspace.nodes).length;
-        if (result.droppedConnections > 0) showNotice('error', 'file.loadedWithDropped', [nodes, result.droppedConnections]);
-        else showNotice('info', 'file.loaded', [nodes]);
-        return null;
-    }
-
-    function newWorkspace() {
-        loadWorkspace(createWorkspace(), { x: 0, y: 0, z: 1 });
-        showNotice('info', 'file.newWorkspace');
-    }
-
-    /** При старте приложения: поднимает пространство из автосохранения. Возвращает true, если было что поднимать. */
-    function restoreSaved(): boolean {
-        const text = readSaved();
-        if (text === null) return false;
-
-        const result = parse(text, registry);
-        if (!result.ok) {
-            backupBroken(text);
-            showNotice('error', 'file.error.restoreFailed');
-            return false;
-        }
-
-        loadWorkspace(result.workspace, result.view, true);
-        return true;
-    }
-
-    //---]>
-    // undo/redo
-
-    const snapshot = () => JSON.stringify(workspace.value);
-    const history = new History(snapshot());
-    const canUndo = ref(false);
-    const canRedo = ref(false);
-
-    function syncHistory() {
-        canUndo.value = history.canUndo;
-        canRedo.value = history.canRedo;
-        scheduleSave(); // пространство изменилось (правка, undo или redo) — автосохранение подхватит
-    }
-
-    /** Запоминает текущее состояние как шаг истории. Одинаковый `key` подряд склеивает правки (набор текста). */
-    function commit(key?: string) {
-        history.commit(snapshot(), key);
-        syncHistory();
-    }
-
-    function restore(state: string | null): boolean {
-        if (state === null) return false;
-
-        workspace.value = JSON.parse(state);
-        // Выделение и незавершённые действия не входят в историю, но не должны ссылаться на исчезнувшее.
-        for (const id of [...selection]) if (!workspace.value.nodes[id]) selection.delete(id);
-        if (selectedConnection.value && !workspace.value.connections.some((c) => c.id === selectedConnection.value)) {
+    const session = createDocumentSession<Workspace, MessageKey>({
+        document: { get: () => workspace.value, set: (next) => (workspace.value = next) },
+        camera: { get: () => camera.value, set: (next) => (camera.value = next) },
+        storage,
+        codec: {
+            serialize,
+            parse(text) {
+                const result = parse(text, registry);
+                return result.ok ? { ok: true, doc: result.workspace, view: result.view, dropped: result.droppedConnections } : result;
+            },
+        },
+        empty: createWorkspace,
+        countNodes: (ws) => Object.keys(ws.nodes).length,
+        keys: {
+            loaded: 'file.loaded',
+            loadedWithDropped: 'file.loadedWithDropped',
+            newDocument: 'file.newWorkspace',
+            saveFailed: 'file.error.saveFailed',
+            restoreFailed: 'file.error.restoreFailed',
+            loadError: (code) => `file.error.${code}` as MessageKey,
+        },
+        onReset() {
+            selection.clear();
             selectedConnection.value = null;
-        }
-        pending.value = null;
-        palette.value = null;
-        syncHistory();
-        return true;
-    }
+            pending.value = null;
+            palette.value = null;
+        },
+        onRestore(ws) {
+            // Выделение и незавершённые действия не входят в историю, но не должны ссылаться на исчезнувшее.
+            for (const id of [...selection]) if (!ws.nodes[id]) selection.delete(id);
+            if (selectedConnection.value && !ws.connections.some((c) => c.id === selectedConnection.value)) {
+                selectedConnection.value = null;
+            }
+            pending.value = null;
+            palette.value = null;
+        },
+    });
 
-    const undo = () => restore(history.undo());
-    const redo = () => restore(history.redo());
-
-    /** Действие, меняющее пространство: после него состояние попадает в историю. */
-    function recorded<A extends unknown[], R>(fn: (...args: A) => R, key?: (...args: A) => string): (...args: A) => R {
-        return (...args) => {
-            const result = fn(...args);
-            commit(key?.(...args));
-            return result;
-        };
-    }
+    const { notice, showNotice, canUndo, canRedo, commit, undo, redo, recorded, exportText, importText, restoreSaved, startAutosave, flushSave } = session;
+    const loadWorkspace = session.load;
+    const newWorkspace = session.newDocument;
 
     //---]>
     // палитра нод
