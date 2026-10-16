@@ -80,10 +80,11 @@ function finishTitle(save: boolean) {
         class="node"
         :class="{ selected, unknown: !def, container: def?.container, tinted: tint }"
         :data-node-id="node.id"
+        :data-node-container="def?.container ? '' : undefined"
         :style="nodeStyle"
     >
         <div class="frame">
-            <header class="bar">
+            <header class="bar" data-node-handle>
                 <i class="grip" />
                 <input
                     v-if="editing"
@@ -381,7 +382,7 @@ function finishTitle(save: boolean) {
 }
 
 /* Пины всех нод видны, пока тянется связь. */
-:global(.canvas.connecting) .dot {
+:global(.tx-canvas.connecting) .dot {
     opacity: 1;
 }
 
@@ -424,7 +425,7 @@ function finishTitle(save: boolean) {
 }
 
 .node.point .ring:hover,
-:global(.canvas.connecting) .node.point .ring {
+:global(.tx-canvas.connecting) .node.point .ring {
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tao-color-accent, #f59e0b) 60%, transparent);
 }
 
