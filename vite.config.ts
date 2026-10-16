@@ -8,6 +8,8 @@ export default defineConfig({
     plugins: [vue()],
     resolve: {
         alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+        // Пакеты, слинкованные с соседних папок (@1337exp/taoux), не должны тащить вторую копию Vue.
+        dedupe: ['vue'],
     },
     test: {
         environment: 'happy-dom',

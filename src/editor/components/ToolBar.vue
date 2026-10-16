@@ -3,7 +3,8 @@ import { computed, ref } from 'vue';
 import { TaoButton, TaoSegmented, TaoSegmentedOption } from '@1337exp/taoui';
 import type { Arrow } from '@/core/types';
 import { LOCALE_CODES, LOCALE_NAMES, isLocaleCode, setLocale, useI18n } from '@/i18n';
-import { downloadText, FILE_NAME, MAX_FILE_BYTES } from '../file';
+import { downloadText, MAX_FILE_BYTES } from '@1337exp/taoux/file';
+import { FILE_NAME } from '../file';
 import { coarse } from '../touch';
 import { useEditor } from '../store';
 

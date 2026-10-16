@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { Anchor, Side } from '@/core/types';
 import type { Rect, ResizeEdge } from '@/core/workspace';
-import { panBy, screenToWorld, zoomAt } from '../camera';
+import { panBy, screenToWorld, zoomAt } from '@1337exp/taoux/camera';
 import { edgeScrollVelocity } from '../edgescroll';
 import { GRID } from '../snap';
 import { LONG_PRESS_MS, PinchTracker, TapRecognizer, pinchOf, type Sample } from '../gestures';
