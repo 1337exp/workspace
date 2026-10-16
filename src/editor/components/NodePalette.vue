@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from '@/i18n';
 import { useEditor } from '../store';
-import { coarse } from '../touch';
+import { coarse } from '@1337exp/taoux/touch';
 
 const editor = useEditor();
 const { t, nodeTitle } = useI18n();

@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { anchorPoint, resolveLink, sideToward } from '@/core/workspace';
 import type { Side } from '@/core/types';
-import { linkShape, type LinkShape } from '../curve';
+import { linkShape, type LinkShape } from '@1337exp/taoux/curve';
 import { useEditor } from '../store';
 
 const editor = useEditor();

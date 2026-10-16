@@ -6,7 +6,7 @@ import type { Arrow } from '@/core/types';
 import { useI18n } from '@/i18n';
 import { useEditor } from '../store';
 import DistributeIcon from './DistributeIcon.vue';
-import { coarse } from '../touch';
+import { coarse } from '@1337exp/taoux/touch';
 
 /**
  * Панель действий над выделенным, закреплённая у нижнего края экрана. Не привязана к ноде и не зависит от

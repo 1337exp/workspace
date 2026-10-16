@@ -1,5 +1,5 @@
 import { dataVersionOf } from './define';
-import { uid } from './ids';
+import { uid } from '@1337exp/taoux/ids';
 import type { Registry } from './registry';
 import type { Anchor, Arrow, Connection, NodeInstance, Side, Workspace } from './types';
 

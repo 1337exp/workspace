@@ -5,7 +5,7 @@ import type { Arrow } from '@/core/types';
 import { LOCALE_CODES, LOCALE_NAMES, isLocaleCode, setLocale, useI18n } from '@/i18n';
 import { downloadText, MAX_FILE_BYTES } from '@1337exp/taoux/file';
 import { FILE_NAME } from '../file';
-import { coarse } from '../touch';
+import { coarse } from '@1337exp/taoux/touch';
 import { useEditor } from '../store';
 
 const editor = useEditor();

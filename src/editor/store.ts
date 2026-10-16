@@ -26,7 +26,7 @@ import {
 import type { MessageArgs, MessageKey } from '@/i18n';
 import { createDefaultRegistry } from '@/nodes';
 import { createCamera, MAX_ZOOM, MIN_ZOOM, screenToWorld, type Camera } from '@1337exp/taoux/camera';
-import { GRID, snapThreshold, softSnap } from './snap';
+import { GRID, snapThreshold, softSnap } from '@1337exp/taoux/snap';
 import { createDemo } from './demo';
 import { History } from '@1337exp/taoux/history';
 import { backupBroken, readSaved, writeSaved } from './persistence';
