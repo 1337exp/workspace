@@ -126,6 +126,7 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
     nodes: {
         note: { placeholder: 'Note text…' },
         text: { placeholder: 'Text', action: { large: 'Large text' } },
+        link: { placeholder: 'Link address', empty: 'Paste a link address', invalid: 'Not a web address (http or https needed)', open: 'Open' },
         checklist: { item: 'Item', add: 'Add item', progress: '{0} of {1}', action: { hideDone: 'Hide completed' } },
         image: {
             placeholder: 'Image URL',

@@ -20,6 +20,8 @@ export function registerAppIcons() {
         'node-text': { body: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>' },
         'node-checklist': { body: '<path d="M4 6l2 2 3-3M4 14l2 2 3-3M13 7h7M13 15h7"/>' },
         'text-large': { body: '<path d="M3 19l5-13 5 13M5 14h6M17 10v8M14 14h6"/>' },
+        'node-link': { body: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>' },
+        'link-open': { body: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>' },
         'node-image': { body: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>' },
         'node-group': { body: '<rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="3 3"/>' },
 

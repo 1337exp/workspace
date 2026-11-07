@@ -123,6 +123,7 @@ export default {
     nodes: {
         note: { placeholder: 'Текст заметки…' },
         text: { placeholder: 'Текст', action: { large: 'Крупный текст' } },
+        link: { placeholder: 'Адрес ссылки', empty: 'Вставь адрес ссылки', invalid: 'Это не веб-адрес (нужен http или https)', open: 'Открыть' },
         checklist: { item: 'Пункт', add: 'Добавить пункт', progress: '{0} из {1}', action: { hideDone: 'Скрыть выполненные' } },
         image: {
             placeholder: 'Ссылка на картинку',
@@ -137,6 +138,7 @@ export default {
             note: { title: 'Заметка' },
             text: { title: 'Текст' },
             checklist: { title: 'Чеклист' },
+            link: { title: 'Ссылка' },
             image: { title: 'Картинка' },
             group: { title: 'Группа' },
             reroute: { title: 'Точка' },
