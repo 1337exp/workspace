@@ -45,6 +45,9 @@ export const useEditor = defineStore('editor', () => {
     const link = useConnect({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow });
     const place = usePlace({ workspace, registry, selection: sel, view, defaultArrow: prefs.defaultArrow });
 
+    /** Открытое контекстное меню: точка на холсте (px) и то, на что нажали. */
+    const contextMenu = ref<{ screen: [number, number]; target: { kind: 'node'; nodeId: string } | { kind: 'link'; id: string } } | null>(null);
+
     /** Нода, которую правят на месте (текст). Двойной клик или новая нода включают, конец правки выключает. */
     const editingNode = ref<string | null>(null);
     const tool = useTool({ workspace, registry, selection: sel, place, snapEnabled: prefs.snapEnabled, editingNode });
@@ -82,6 +85,7 @@ export const useEditor = defineStore('editor', () => {
         onReset() {
             sel.clearSelection();
             editingNode.value = null;
+            contextMenu.value = null;
             dropStale();
         },
         onRestore(ws) {
@@ -92,6 +96,25 @@ export const useEditor = defineStore('editor', () => {
     });
 
     const { recorded } = session;
+
+    /**
+     * Правый клик по ноде или связи. Нода, не входящая в выделение, становится выделением (как в Figma); входящая
+     * оставляет выделение как есть, и меню действует на всё выделенное. Пустое место меню не открывает (палитра).
+     */
+    function openContext(screen: [number, number], target: { kind: 'node'; nodeId: string } | { kind: 'link'; id: string } | { kind: 'empty' }): boolean {
+        if (target.kind === 'empty') return false;
+        if (target.kind === 'node') {
+            if (!sel.selection.has(target.nodeId)) sel.selectOnly(target.nodeId);
+            else sel.selectedConnection.value = null;
+        } else {
+            sel.selectOnlyConnection(target.id);
+        }
+        place.closePalette();
+        contextMenu.value = { screen, target };
+        return true;
+    }
+
+    const closeContext = () => (contextMenu.value = null);
 
     function startEdit(id: string) {
         if (registry.find(workspace.value.nodes[id]?.type ?? '')?.inlineEdit) editingNode.value = id;
@@ -109,6 +132,9 @@ export const useEditor = defineStore('editor', () => {
         workspace,
         titleEditing,
         editingNode,
+        contextMenu,
+        openContext,
+        closeContext,
         startEdit,
         endEdit,
         fitHeight: edit.fitHeight,
@@ -165,6 +191,9 @@ export const useEditor = defineStore('editor', () => {
         distributeSelected: recorded(edit.distributeSelected),
         straightenSelectedLink: recorded(edit.straightenSelectedLink),
         removeSelected: recorded(edit.removeSelected),
+        duplicateSelected: recorded(edit.duplicateSelected),
+        bringSelectedToFront: recorded(edit.bringSelectedToFront),
+        sendSelectedToBack: recorded(edit.sendSelectedToBack),
         setColor: recorded(edit.setColor),
         splitConnection: recorded(edit.splitConnection),
         patchData: recorded(edit.patchData, (id) => `data:${id}`),

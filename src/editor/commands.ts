@@ -45,6 +45,9 @@ export function createEditorCommands(editor: Editor) {
 
         { id: 'edit.undo', label: () => t('history.undo'), icon: 'tao-undo', shortcut: 'Mod+Z', enabled: () => editor.canUndo, run: () => editor.undo() },
         { id: 'edit.redo', label: () => t('history.redo'), icon: 'tao-redo', shortcut: ['Mod+Shift+Z', 'Mod+Y'], enabled: () => editor.canRedo, run: () => editor.redo() },
+        { id: 'edit.duplicate', label: () => t('context.duplicate'), icon: 'tao-copy', shortcut: 'Mod+D', enabled: () => nodeCount() > 0, run: () => editor.duplicateSelected() },
+        { id: 'node.front', label: () => t('context.front'), icon: 'order-front', shortcut: ']', enabled: () => nodeCount() > 0, run: () => editor.bringSelectedToFront() },
+        { id: 'node.back', label: () => t('context.back'), icon: 'order-back', shortcut: '[', enabled: () => nodeCount() > 0, run: () => editor.sendSelectedToBack() },
         { id: 'edit.delete', label: () => t('context.delete'), icon: 'tao-trash', shortcut: ['Delete', 'Backspace'], enabled: hasSelection, run: () => editor.removeSelected() },
 
         { id: 'view.grid', label: () => t('grid.label'), icon: 'view-grid', checked: () => editor.snapEnabled, run: () => (editor.snapEnabled = !editor.snapEnabled) },

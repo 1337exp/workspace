@@ -1,0 +1,82 @@
+import { computed } from 'vue';
+import type { TaoMenuItem } from '@1337exp/taoui';
+import { NODE_COLORS, type NodeColor } from '@/core/colors';
+import { useI18n, type MessageKey } from '@/i18n';
+import { ALIGN_COMMANDS, useCommands } from './commands';
+import { useEditor } from './store';
+
+const SEP: TaoMenuItem = { type: 'separator' };
+
+/**
+ * Пункты контекстного меню для того, на что нажали: нода (или все выделенные) или связь. Пункты, у которых есть
+ * команда, берутся из реестра команд (подпись, сочетание, «можно ли»); переключатели типа ноды и цвета строятся здесь
+ * по состоянию выделения. Выбор разбирает `runContextItem`.
+ * Items of the context menu for what was pressed: a node (or everything selected) or a link. Items that have a command
+ * come from the command registry (label, shortcut, "can it run"); the toggles of the node type and the colours are
+ * built here from the state of the selection. A pick is handled by `runContextItem`.
+ */
+export function useContextMenu() {
+    const editor = useEditor();
+    const cmd = useCommands();
+    const { t } = useI18n();
+
+    const menu = (layout: Parameters<typeof cmd.commands.toMenu>[0]) => cmd.commands.toMenu(layout) as TaoMenuItem[];
+
+    const items = computed<TaoMenuItem[]>(() => {
+        const target = editor.contextMenu?.target;
+        if (!target) return [];
+
+        if (target.kind === 'link') {
+            return menu(['link.line', 'link.arrow', 'link.reverse', 'link.straighten', '-', 'edit.delete']);
+        }
+
+        const out: TaoMenuItem[] = menu(['edit.duplicate', 'node.front', 'node.back']);
+
+        // Переключатели типа ноды («Скрыть выполненные», «Крупный текст»): галочки.
+        if (editor.nodeActions.length) {
+            out.push(SEP);
+            for (const a of editor.nodeActions) {
+                out.push({ type: 'checkbox', id: `action:${a.id}`, label: t(`nodes.${a.type}.action.${a.id}` as MessageKey), checked: a.checked });
+            }
+        }
+
+        // Цвет: радио «без цвета» и шесть цветов.
+        if (editor.colorable.length) {
+            out.push(SEP, {
+                id: 'color',
+                label: t('context.color'),
+                items: [
+                    { type: 'radio', id: 'color:none', group: 'color', label: t('context.noColor'), checked: editor.selectionColor === null },
+                    ...NODE_COLORS.map(
+                        (c): TaoMenuItem => ({ type: 'radio', id: `color:${c}`, group: 'color', label: t(`context.colors.${c}` as MessageKey), checked: editor.selectionColor === c }),
+                    ),
+                ],
+            });
+        }
+
+        if (editor.selection.size > 1) {
+            out.push({
+                id: 'align',
+                label: t('context.align.title'),
+                items: menu([...ALIGN_COMMANDS.map((a) => `align.${a.kind}`), '-', 'align.distributeX', 'align.distributeY']),
+            });
+        }
+
+        out.push(SEP, ...menu(['edit.delete']));
+        return out;
+    });
+
+    /** Выбор пункта: цвет, переключатель типа ноды или команда реестра. */
+    function runContextItem(id: string) {
+        if (id.startsWith('color:')) {
+            const name = id.slice('color:'.length);
+            editor.setColor(name === 'none' ? null : (name as NodeColor));
+        } else if (id.startsWith('action:')) {
+            editor.runNodeAction(id.slice('action:'.length));
+        } else {
+            cmd.run(id);
+        }
+    }
+
+    return { items, runContextItem };
+}

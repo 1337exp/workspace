@@ -49,6 +49,9 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
 
     context: {
         title: 'Actions on the selection',
+        duplicate: 'Duplicate',
+        front: 'Bring to front',
+        back: 'Send to back',
         nodeActions: 'Node properties',
         color: 'Color',
         noColor: 'No color',

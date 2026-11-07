@@ -15,6 +15,9 @@ export function registerAppIcons() {
         'view-fit': { body: '<path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/>' },
         'view-list': { body: '<path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01"/>' },
 
+        'order-front': { body: '<rect x="9" y="9" width="11" height="11" rx="1"/><path d="M15 5H5v10"/>' },
+        'order-back': { body: '<rect x="4" y="4" width="11" height="11" rx="1"/><path d="M9 20h11V9"/>' },
+
         // ноды
         'node-note': { body: '<path d="M5 4h14v10l-5 6H5z"/><path d="M14 20v-6h5"/>' },
         'node-text': { body: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>' },

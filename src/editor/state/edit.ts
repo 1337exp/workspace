@@ -3,7 +3,7 @@ import { alignNodes, distributeNodes, straightenLink, type AlignKind, type Distr
 import { isNodeColor, type NodeColor } from '@/core/colors';
 import type { Registry } from '@/core/registry';
 import type { Arrow, NodeData, Workspace } from '@/core/types';
-import { disconnect, dissolveNode, raiseToFront, removeNode, reverseConnection, setArrow, splitConnection as split } from '@/core/workspace';
+import { disconnect, dissolveNode, duplicateNodes, lowerToBack, raiseToFront, removeNode, reverseConnection, setArrow, splitConnection as split } from '@/core/workspace';
 import type { SelectionSlice } from './selection';
 
 interface Deps {
@@ -143,6 +143,28 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow }: D
         }
     }
 
+    /** Копирует выделенные ноды (с вложенным в группы и связями между ними) со сдвигом и выделяет копии. */
+    function duplicateSelected() {
+        const copies = duplicateNodes(workspace.value, registry, selection);
+        if (copies.length === 0) return;
+        sel.setSelection(copies.map((n) => n.id));
+        sel.selectedConnection.value = null;
+    }
+
+    // Группы всегда лежат подложкой (так рисует холст), их порядок ничего не меняет: пропускаем.
+    const plainSelected = () =>
+        Object.keys(workspace.value.nodes).filter((id) => selection.has(id) && !registry.find(workspace.value.nodes[id]!.type)?.container);
+
+    /** Выделенные ноды поверх остальных, друг над другом в прежнем порядке. */
+    function bringSelectedToFront() {
+        for (const id of plainSelected()) raiseToFront(workspace.value, id);
+    }
+
+    /** Выделенные ноды под остальные, друг над другом в прежнем порядке. */
+    function sendSelectedToBack() {
+        for (const id of plainSelected().reverse()) lowerToBack(workspace.value, id);
+    }
+
     function reverseSelected() {
         if (sel.selectedConnection.value) reverseConnection(workspace.value, sel.selectedConnection.value);
     }
@@ -160,6 +182,9 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow }: D
         patchData,
         setArrowStyle,
         reverseSelected,
+        duplicateSelected,
+        bringSelectedToFront,
+        sendSelectedToBack,
         dropIfEmpty,
         fitHeight,
         nodeActions,

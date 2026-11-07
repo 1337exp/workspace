@@ -46,6 +46,9 @@ export default {
 
     context: {
         title: 'Действия над выделенным',
+        duplicate: 'Дублировать',
+        front: 'На передний план',
+        back: 'На задний план',
         nodeActions: 'Свойства ноды',
         color: 'Цвет',
         noColor: 'Без цвета',

@@ -47,7 +47,12 @@ export function workspaceCanvasHost(editor: Editor, claimsKey: (event: KeyboardE
             return editor.palette !== null;
         },
         openPalette: (screen, world, origin) => editor.openPalette(screen, world, origin),
-        closePalette: () => editor.closePalette(),
+        // Нажатие по холсту закрывает и палитру, и контекстное меню.
+        closePalette: () => {
+            editor.closePalette();
+            editor.closeContext();
+        },
+        contextMenu: (screen, _world, target) => editor.openContext(screen, target),
 
         connect: {
             get origin() {

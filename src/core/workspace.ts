@@ -268,3 +268,66 @@ export function raiseToFront(ws: Workspace, nodeId: string): boolean {
     ws.nodes[nodeId] = node;
     return true;
 }
+
+/**
+ * Отправляет ноду под остальные: порядок отрисовки задаёт порядок ключей, поэтому перекладываем её в начало.
+ * Возвращает false, если нода уже внизу или её нет.
+ * Sends a node under the rest: the drawing order is the order of the keys, so it moves to the front of them.
+ * Returns false if it is already at the bottom or does not exist.
+ */
+export function lowerToBack(ws: Workspace, nodeId: string): boolean {
+    const node = ws.nodes[nodeId];
+    const ids = Object.keys(ws.nodes);
+    if (!node || ids[0] === nodeId) return false;
+
+    const rest = ids.filter((id) => id !== nodeId);
+    const entries = rest.map((id) => [id, ws.nodes[id]!] as const);
+    for (const id of ids) delete ws.nodes[id];
+    ws.nodes[nodeId] = node;
+    for (const [id, n] of entries) ws.nodes[id] = n;
+    return true;
+}
+
+/**
+ * Копирует ноды вместе с тем, что лежит внутри выбранных контейнеров, и связями между скопированными нодами.
+ * Копии сдвинуты на `offset` и ложатся поверх (в конец порядка отрисовки). Возвращает копии выбранных нод
+ * (а не вложенных в них): именно их и стоит выделить.
+ * Copies nodes together with what lies inside the picked containers and the links between the copied nodes. The copies
+ * are shifted by `offset` and go on top (to the end of the drawing order). Returns the copies of the picked nodes (not
+ * of those inside them): those are the ones worth selecting.
+ */
+export function duplicateNodes(ws: Workspace, registry: Registry, ids: Iterable<string>, offset: Point = [24, 24]): NodeInstance[] {
+    const picked = [...ids].filter((id) => ws.nodes[id]);
+    const all = [...new Set([...picked, ...carriedBy(ws, registry, picked)])];
+    const map = new Map<string, string>();
+
+    // По порядку отрисовки, чтобы копии сохранили, кто над кем.
+    const order = Object.keys(ws.nodes).filter((id) => all.includes(id));
+    for (const id of order) {
+        const src = ws.nodes[id]!;
+        const copy: NodeInstance = {
+            ...src,
+            id: uid('n', (x) => x in ws.nodes),
+            x: src.x + offset[0],
+            y: src.y + offset[1],
+            // Данные ноды это JSON: копия не делит с оригиналом ни массивы пунктов, ни вложенные объекты.
+            data: JSON.parse(JSON.stringify(src.data)) as NodeInstance['data'],
+        };
+        ws.nodes[copy.id] = copy;
+        map.set(id, copy.id);
+    }
+
+    for (const c of [...ws.connections]) {
+        const from = map.get(c.from.node);
+        const to = map.get(c.to.node);
+        if (from === undefined || to === undefined) continue;
+        ws.connections.push({
+            id: uid('c', (x) => ws.connections.some((k) => k.id === x)),
+            from: { node: from, side: c.from.side },
+            to: { node: to, side: c.to.side },
+            arrow: c.arrow,
+        });
+    }
+
+    return picked.map((id) => ws.nodes[map.get(id)!]!);
+}

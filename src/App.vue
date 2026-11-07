@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted } from 'vue';
 import { useI18n } from '@/i18n';
 import EditorCanvas from '@/editor/components/EditorCanvas.vue';
 import NodePalette from '@/editor/components/NodePalette.vue';
+import ContextMenu from '@/editor/components/ContextMenu.vue';
 import ContextBar from '@/editor/components/ContextBar.vue';
 import AppMenu from '@/editor/components/AppMenu.vue';
 import ToolDock from '@/editor/components/ToolDock.vue';
@@ -28,6 +29,7 @@ onBeforeUnmount(() => unbind?.());
         <ZoomBar />
         <ContextBar />
         <NodePalette />
+        <ContextMenu />
         <div v-if="editor.notice" class="notice" :class="editor.notice.kind">
             {{ t(editor.notice.key, editor.notice.args) }}
         </div>

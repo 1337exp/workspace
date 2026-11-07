@@ -63,6 +63,8 @@ The title in the strip (of a note, group, checklist, link) is edited with a doub
 - **Bottom left:** zoom, the view menu ("Zoom to fit", 100%, grid) and the help "?" with a list of gestures and keys.
 - **Top left:** the ☰ menu (file: "New", "Open" `Ctrl+O`, "Save" `Ctrl+S`; light or dark theme; language) and a quick theme switch.
 
+**Context menu** (a right click on a node or a link; an empty place still opens the palette): "Duplicate" `Ctrl+D` (with what lies inside a group and the links between the copies; the copies get selected), "Bring to front" `]`, "Send to back" `[`, the toggles of the node type, colour, alignment (two or more nodes), "Delete"; for a link its style, "Reverse", "Straighten". A node outside the selection becomes the selection on a right click, a node inside it keeps it, and the menu acts on everything selected. A right button that was dragged pans as before.
+
 Other keys: `Delete` removes the selection, `Ctrl+Z` / `Ctrl+Y` undo and redo, `Esc` drops the tool, then the palette, then the selection. Letter keys work on a Russian layout too.
 
 **Touch (a tablet).** A finger moves the canvas, two fingers move and zoom, a long press on an empty place opens the palette, a double tap works as a double click, the "Select" mode in the left dock stands in for `Ctrl`. A pen counts as a mouse. Details and a checklist for testing: [docs/touch.md](docs/touch.md) (in Russian). `?debug=touch` in the address shows the recognised gestures.
@@ -124,7 +126,7 @@ Look: the Roboto font in `src/assets/font`, our own colours from the `--tao-colo
 
 ## Not yet
 
-A context menu on right click, "Duplicate", the depth order of nodes (`[` and `]`), smart guides while dragging, labels on links, nested checklist items, drawing, stickers and comments. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
+A context menu on touch (a long press on a node), smart guides while dragging, labels on links, nested checklist items, drawing, stickers and comments. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
 
 ## License
 
