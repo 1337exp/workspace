@@ -124,7 +124,7 @@ export default {
         note: { placeholder: 'Текст заметки…' },
         text: { placeholder: 'Текст', action: { large: 'Крупный текст' } },
         link: { placeholder: 'Адрес ссылки', empty: 'Вставь адрес ссылки', invalid: 'Это не веб-адрес (нужен http или https)', open: 'Открыть' },
-        checklist: { item: 'Пункт', add: 'Добавить пункт', progress: '{0} из {1}', action: { hideDone: 'Скрыть выполненные' } },
+        checklist: { item: 'Пункт', add: 'Добавить пункт', move: 'Переставить пункт', progress: '{0} из {1}', action: { hideDone: 'Скрыть выполненные' } },
         image: {
             placeholder: 'Ссылка на картинку',
             empty: 'Вставь ссылку на картинку',

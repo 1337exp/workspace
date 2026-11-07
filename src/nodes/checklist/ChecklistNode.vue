@@ -1,8 +1,9 @@
 <script lang="ts" setup>
-import { computed, nextTick, onMounted } from 'vue';
-import { TaoButton, TaoCheckbox } from '@1337exp/taoui';
+import { computed, nextTick, onMounted, ref } from 'vue';
+import { TaoButton, TaoCheckbox, TaoIcon } from '@1337exp/taoui';
+import { sortableTextsEn, sortableTextsRu, useSortable } from '@1337exp/taoux/sortable';
 import { useI18n } from '@/i18n';
-import { emptyItem, insertItem, pasteLines, progress, removeItem, type ChecklistData, type ChecklistItem } from './items';
+import { emptyItem, insertItem, pasteLines, progress, removeItem, reorder, type ChecklistData, type ChecklistItem } from './items';
 
 /**
  * Чеклист: пункты с галочкой и текстом. Enter добавляет пункт ниже, Backspace в пустом убирает его, стрелки ходят по
@@ -13,7 +14,7 @@ import { emptyItem, insertItem, pasteLines, progress, removeItem, type Checklist
 const props = defineProps<{ data: ChecklistData; selected: boolean }>();
 const emit = defineEmits<{ change: [patch: Partial<ChecklistData>] }>();
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const items = computed<ChecklistItem[]>(() => (props.data.items?.length ? props.data.items : [emptyItem([])]));
 const shown = computed(() => (props.data.hideDone ? items.value.filter((i) => !i.done) : items.value));
@@ -40,6 +41,15 @@ onMounted(() => {
 });
 
 const commit = (next: ChecklistItem[]) => emit('change', { items: next });
+
+// Перестановка за ручку слева (и с клавиатуры: Пробел поднимает, стрелки двигают). Списком управляет TaoUX, мы только
+// говорим, куда встал пункт.
+const list = ref<HTMLElement | null>(null);
+useSortable(list, {
+    onMove: (from, to) => commit(reorder(items.value, shown.value, from, to)),
+    texts: () => (locale.value === 'ru' ? sortableTextsRu : sortableTextsEn),
+    itemLabel: (el) => el.querySelector<HTMLInputElement>('input.text')?.value || t('nodes.checklist.item'),
+});
 
 function setText(id: string, text: string) {
     commit(items.value.map((i) => (i.id === id ? { ...i, text } : i)));
@@ -87,8 +97,11 @@ function onPaste(e: ClipboardEvent, item: ChecklistItem) {
 
 <template>
     <div class="checklist">
-        <ul class="items">
-            <li v-for="item in shown" :key="item.id" class="item">
+        <ul ref="list" class="items">
+            <li v-for="item in shown" :key="item.id" class="item" data-sortable-item>
+                <button class="grip" type="button" data-sortable-handle :aria-label="t('nodes.checklist.move')" :title="t('nodes.checklist.move')">
+                    <TaoIcon name="tao-grip" />
+                </button>
                 <TaoCheckbox :model-value="item.done" :aria-label="item.text || t('nodes.checklist.item')" @update:model-value="setDone(item.id, $event)" />
                 <input
                     :ref="(el) => setInput(item.id, el)"
@@ -139,6 +152,50 @@ function onPaste(e: ClipboardEvent, item: ChecklistItem) {
     align-items: center;
     gap: 8px;
     min-height: 30px;
+}
+
+/* Ручка перестановки: бледная, ярче при наведении на пункт и всегда видна под пальцем. */
+.grip {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 24px;
+    margin-left: -4px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--tao-radius-control);
+    background: transparent;
+    color: var(--tao-color-text-muted);
+    cursor: grab;
+    opacity: 0;
+    touch-action: none;
+}
+
+.item:hover .grip,
+.grip:focus-visible,
+.item[data-sortable-lifted] .grip {
+    opacity: 0.8;
+}
+
+.item[data-sortable-dragging] .grip {
+    cursor: grabbing;
+}
+
+@media (pointer: coarse) {
+    .grip {
+        width: 24px;
+        opacity: 0.6;
+    }
+}
+
+/* Поднятый пункт: на своём фоне и с тенью, остальные расступаются. */
+.item[data-sortable-dragging],
+.item[data-sortable-lifted] {
+    border-radius: var(--tao-radius-control);
+    background: var(--tao-color-surface-hover);
+    box-shadow: var(--tao-shadow-panel);
 }
 
 .text {

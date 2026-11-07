@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { emptyItem, insertItem, newId, pasteLines, progress, removeItem, type ChecklistItem } from '@/nodes/checklist/items';
+import { emptyItem, insertItem, newId, pasteLines, progress, removeItem, reorder, type ChecklistItem } from '@/nodes/checklist/items';
 import { useEditor } from '@/editor/store';
 import { parse, serialize } from '@/core/serialize';
 
@@ -117,5 +117,30 @@ describe('нода «Чеклист» и переключатели типов �
         const back = parse(serialize(editor.workspace), editor.registry);
         expect(back.ok).toBe(true);
         if (back.ok) expect(back.workspace.nodes[n.id]!.data).toMatchObject({ hideDone: true, items: [{ text: 'молоко', done: true }, { text: 'хлеб' }] });
+    });
+});
+
+describe('перестановка пунктов', () => {
+    const list = [item('a', 'a'), item('b', 'b'), item('c', 'c'), item('d', 'd')];
+    const ids = (items: ChecklistItem[]) => items.map((i) => i.id).join('');
+
+    it('вниз встаёт после целевого, вверх перед ним', () => {
+        expect(ids(reorder(list, list, 0, 2))).toBe('bcad');
+        expect(ids(reorder(list, list, 3, 1))).toBe('adbc');
+        expect(ids(reorder(list, list, 1, 1))).toBe('abcd');
+    });
+
+    it('при спрятанных выполненных номера видимого списка переводятся в полный, спрятанные остаются при соседях', () => {
+        // b и c выполнены и спрятаны; видно a, d
+        const full = [item('a'), item('b', '', true), item('c', '', true), item('d')];
+        const shown = full.filter((i) => !i.done);
+        expect(ids(reorder(full, shown, 0, 1))).toBe('bcda'); // a встал после d
+        expect(ids(reorder(full, shown, 1, 0))).toBe('dabc'); // d встал перед a
+    });
+
+    it('неверные номера список не меняют, исходный не трогается', () => {
+        expect(ids(reorder(list, list, 9, 0))).toBe('abcd');
+        expect(ids(reorder(list, list, 0, 9))).toBe('abcd');
+        expect(ids(list)).toBe('abcd');
     });
 });

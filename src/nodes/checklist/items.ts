@@ -1,4 +1,5 @@
 import { uid } from '@1337exp/taoux/ids';
+import { moveItem } from '@1337exp/taoux/sortable';
 
 /** Пункт чеклиста. / A checklist item. */
 export interface ChecklistItem {
@@ -56,6 +57,26 @@ export function pasteLines(items: readonly ChecklistItem[], id: string, text: st
 export function removeItem(items: readonly ChecklistItem[], id: string): ChecklistItem[] {
     if (items.length <= 1) return items.map((i) => ({ ...i, text: '', done: false }));
     return items.filter((i) => i.id !== id);
+}
+
+/**
+ * Перестановка по номерам в видимом списке. Видимый список может быть короче полного (выполненные спрятаны), поэтому
+ * номера `from` и `to` переводятся в места в полном списке по id: пункт встаёт на место того, на чьё место его тащили,
+ * а спрятанные пункты остаются при своих соседях.
+ * Reordering by positions in the visible list. The visible list may be shorter than the full one (completed items are
+ * hidden), so `from` and `to` are turned into places of the full list by id: the item takes the place of the one it was
+ * dragged to, and hidden items stay with their neighbours.
+ */
+export function reorder(items: readonly ChecklistItem[], shown: readonly ChecklistItem[], from: number, to: number): ChecklistItem[] {
+    const a = shown[from]?.id;
+    const b = shown[to]?.id;
+    if (a === undefined || b === undefined || a === b) return [...items];
+    // Итоговое место равно прежнему месту целевого пункта: и вниз (встаёт после него), и вверх (встаёт перед ним).
+    return moveItem(
+        items,
+        items.findIndex((i) => i.id === a),
+        items.findIndex((i) => i.id === b),
+    );
 }
 
 export const progress = (items: readonly ChecklistItem[]) => ({
