@@ -17,7 +17,7 @@ const { t } = useI18n();
 
 const percent = computed(() => `${Math.round(editor.camera.z * 100)}%`);
 
-const viewMenu = useMenu(['view.fit', 'view.zoom100', '-', 'view.grid']);
+const viewMenu = useMenu(['view.fit', 'view.zoom100', '-', 'view.grid', 'view.guides']);
 </script>
 
 <template>

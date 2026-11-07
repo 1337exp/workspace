@@ -46,6 +46,7 @@ The title in the strip (of a note, group, checklist, link) is edited with a doub
 | Move a node | by the strip with the title (an input field inside a node does not drag) or by the text itself for a Text node |
 | Resize | by any edge or corner of a node (the middle of an edge is taken by a pin, take it beside) |
 | Grid snapping | the "Grid" item in the view menu (on by default): a node softly sticks to grid lines (step 24) and moves freely between them; resizing and new nodes snap too. `Alt` while dragging turns it off for the moment |
+| Guides | the "Guides" item in the view menu (on by default): while you drag nodes, their edges and centre are compared with the edges and centres of the other nodes; when they coincide (or are within 6 screen px) the node is pulled and a thin line runs through what coincides; a guide wins over the grid on its own axis. `Alt` turns them off for the moment too. They work while dragging; resizing snaps to the grid only |
 
 **Links.**
 

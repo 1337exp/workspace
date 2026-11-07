@@ -33,6 +33,7 @@ export function registerAppIcons() {
         'link-straighten': { body: '<path d="M6 12h12"/><circle cx="4" cy="12" r="1.5"/><circle cx="20" cy="12" r="1.5"/>' },
 
         // вид и файл
+        'view-guides': { body: '<path d="M12 3v18M3 12h18" stroke-dasharray="3 3"/><rect x="6" y="6" width="5" height="5" rx="1"/>' },
         'view-grid': { body: '<path d="M4 4h16v16H4zM4 12h16M12 4v16"/>' },
         'file-save': { body: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>' },
         'touch-select': { body: '<rect x="4" y="4" width="12" height="12" rx="1" stroke-dasharray="3 3"/><path d="M13 13l7 2-3 1.5L15 20z"/>' },

@@ -86,6 +86,11 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         hint: 'Snap to grid. Hold Alt to disable temporarily',
     },
 
+    guides: {
+        label: 'Guides',
+        hint: 'Lines and pulling to the edges and centres of other nodes. Hold Alt to disable temporarily',
+    },
+
     tool: {
         dock: 'Tools',
         select: 'Select',

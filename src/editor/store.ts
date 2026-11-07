@@ -40,7 +40,7 @@ export const useEditor = defineStore('editor', () => {
     const view = useView();
     const sel = useSelection();
     const prefs = usePrefs();
-    const drag = useDrag({ workspace, registry, selection: sel.selection, view });
+    const drag = useDrag({ workspace, registry, selection: sel.selection, view, snapEnabled: prefs.snapEnabled, guidesEnabled: prefs.guidesEnabled });
     const edit = useEdit({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow });
     const link = useConnect({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow });
     const place = usePlace({ workspace, registry, selection: sel, view, defaultArrow: prefs.defaultArrow });
@@ -155,6 +155,8 @@ export const useEditor = defineStore('editor', () => {
 
         // настройки
         snapEnabled: prefs.snapEnabled,
+        guidesEnabled: prefs.guidesEnabled,
+        guides: drag.guides,
         theme: prefs.theme,
         defaultArrow: prefs.defaultArrow,
         selectMode: prefs.selectMode,

@@ -82,7 +82,8 @@ export function workspaceCanvasHost(editor: Editor, claimsKey: (event: KeyboardE
         },
 
         get snapEnabled() {
-            return editor.snapEnabled;
+            // Для холста это «привязка вообще»: сетка и направляющие решают каждая за себя в сторе. Alt отключает обе.
+            return editor.snapEnabled || editor.guidesEnabled;
         },
         get selectMode() {
             return editor.selectMode;

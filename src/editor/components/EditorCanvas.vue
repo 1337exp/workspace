@@ -6,6 +6,7 @@ import { workspaceCanvasHost, workspaceCanvasOptions } from '../canvasHost';
 import { useCommands } from '../commands';
 import { useEditor } from '../store';
 import ConnectionsLayer from './ConnectionsLayer.vue';
+import GuidesLayer from './GuidesLayer.vue';
 import NodeView from './NodeView.vue';
 
 const editor = useEditor();
@@ -27,6 +28,7 @@ const plainNodes = computed(() => Object.values(editor.workspace.nodes).filter((
         <NodeView v-for="node in containers" :key="node.id" :node="node" :selected="editor.selection.has(node.id)" />
         <ConnectionsLayer />
         <NodeView v-for="node in plainNodes" :key="node.id" :node="node" :selected="editor.selection.has(node.id)" />
+        <GuidesLayer />
     </TaoxCanvas>
 </template>
 
