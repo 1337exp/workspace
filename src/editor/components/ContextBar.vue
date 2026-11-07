@@ -122,7 +122,7 @@ function setArrow(value: unknown) {
 
         <span v-if="canColor || link || nodeCount > 1" class="sep" />
 
-        <TaoButton variant="danger" size="small" @click="editor.removeSelected()">
+        <TaoButton variant="secondary" tone="danger" size="small" @click="editor.removeSelected()">
             <i class="icon-trash-1" />{{ t('context.delete') }}
         </TaoButton>
     </div>
