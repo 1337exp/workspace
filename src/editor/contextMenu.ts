@@ -40,7 +40,7 @@ export function useContextMenu() {
         }
 
         if (target.kind === 'link') {
-            return menu(['link.line', 'link.arrow', 'link.reverse', 'link.straighten', '-', 'edit.delete']);
+            return menu(['link.label', '-', 'link.line', 'link.arrow', 'link.reverse', 'link.straighten', '-', 'edit.delete']);
         }
 
         const out: TaoMenuItem[] = menu(['edit.copy', 'edit.cut', 'edit.duplicate', '-', 'node.front', 'node.back']);

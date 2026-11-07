@@ -48,6 +48,9 @@ export const useEditor = defineStore('editor', () => {
     /** Открытое контекстное меню: точка на холсте (px) и то, на что нажали. */
     const contextMenu = ref<{ screen: [number, number]; world: [number, number]; target: { kind: 'node'; nodeId: string } | { kind: 'link'; id: string } | { kind: 'empty' } } | null>(null);
 
+    /** Связь, у которой сейчас правят подпись (поле на середине линии). */
+    const labelEditing = ref<string | null>(null);
+
     /** Нода, которую правят на месте (текст). Двойной клик или новая нода включают, конец правки выключает. */
     const editingNode = ref<string | null>(null);
     const tool = useTool({ workspace, registry, selection: sel, place, snapEnabled: prefs.snapEnabled, editingNode });
@@ -85,6 +88,7 @@ export const useEditor = defineStore('editor', () => {
         onReset() {
             sel.clearSelection();
             editingNode.value = null;
+            labelEditing.value = null;
             contextMenu.value = null;
             dropStale();
         },
@@ -115,6 +119,18 @@ export const useEditor = defineStore('editor', () => {
 
     const closeContext = () => (contextMenu.value = null);
 
+    /** Начать правку подписи связи (по умолчанию выбранной). */
+    function startLabelEdit(id: string | null = sel.selectedConnection.value) {
+        if (id && workspace.value.connections.some((c) => c.id === id)) labelEditing.value = id;
+    }
+
+    // Конец правки: `text` — что набрали, `null` — отмена. Подпись пишется отдельным шагом истории.
+    const saveLabel = recorded((id: string, text: string) => edit.setLinkLabel(id, text));
+    function endLabelEdit(id: string, text: string | null) {
+        if (labelEditing.value === id) labelEditing.value = null;
+        if (text !== null) saveLabel(id, text);
+    }
+
     function startEdit(id: string) {
         if (registry.find(workspace.value.nodes[id]?.type ?? '')?.inlineEdit) editingNode.value = id;
     }
@@ -131,6 +147,9 @@ export const useEditor = defineStore('editor', () => {
         workspace,
         titleEditing,
         editingNode,
+        labelEditing,
+        startLabelEdit,
+        endLabelEdit,
         contextMenu,
         openContext,
         closeContext,

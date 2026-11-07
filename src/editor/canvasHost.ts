@@ -73,7 +73,9 @@ export function workspaceCanvasHost(editor: Editor, claimsKey: (event: KeyboardE
 
         activate(target) {
             if (target.kind === 'link') {
-                editor.splitConnection(target.id, target.at);
+                // Двойной клик по подписи правит её, по самой линии ставит точку.
+                if (target.element?.closest('[data-link-label]')) editor.startLabelEdit(target.id);
+                else editor.splitConnection(target.id, target.at);
             } else if (editor.registry.find(editor.workspace.nodes[target.nodeId]?.type ?? '')?.titleKey) {
                 editor.titleEditing = target.nodeId;
             } else {

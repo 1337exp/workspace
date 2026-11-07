@@ -55,6 +55,7 @@ The title in the strip (of a note, group, checklist, link) is edited with a doub
 | Connect | drag from a pin (there are four: left, right, top, bottom) to another node; released over a node's body, the nearest side is taken |
 | Create a node from a link | release a dragged link over an empty place |
 | A point on a link | a double click on a link puts a point: drag it by its centre, drag new links from the ring around it; `Delete` dissolves the point, the neighbours connect directly |
+| Label | pick a link and press `F2` (or the "Label" button in the bar, or the menu item, or double-click the label itself): a field appears in the middle of the line; `Enter` or a click away saves, `Esc` cancels, an empty label is removed. A label is picked with a click, like the link; up to 120 characters; it travels with the link on duplicate and copy; a point on a link keeps it on the first half |
 | Link style | pick a link and switch "Line / Arrow"; "Reverse" swaps the direction; "Straighten" moves the node so that the link becomes straight |
 
 **Panels.**
@@ -129,7 +130,7 @@ Look: the Roboto font in `src/assets/font`, our own colours from the `--tao-colo
 
 ## Not yet
 
-Smart guides while dragging, labels on links, nested checklist items, drawing, stickers and comments. Copying images and files, pasting images from the clipboard. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
+Smart guides while dragging, nested checklist items, drawing, stickers and comments. Copying images and files, pasting images from the clipboard. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
 
 ## License
 

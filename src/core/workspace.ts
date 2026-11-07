@@ -67,6 +67,29 @@ export function connect(ws: Workspace, from: Anchor, to: Anchor, arrow: Arrow = 
     return connection;
 }
 
+/** Самая длинная подпись связи: это короткая пометка, а не текст. */
+export const MAX_LABEL = 120;
+
+/**
+ * Приводит подпись к хранимому виду: без пробелов по краям и переводов строк, не длиннее `MAX_LABEL`; пустая это `undefined`.
+ * Normalises a label for storage: trimmed, no line breaks, at most `MAX_LABEL` long; an empty one is `undefined`.
+ */
+export function cleanLabel(text: string): string | undefined {
+    const clean = text.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL).trim();
+    return clean === '' ? undefined : clean;
+}
+
+/** Ставит подпись связи; пустая подпись убирает её. Возвращает false, если связи нет или подпись не изменилась. */
+export function setLabel(ws: Workspace, connectionId: string, text: string): boolean {
+    const c = ws.connections.find((x) => x.id === connectionId);
+    if (!c) return false;
+    const label = cleanLabel(text);
+    if (c.label === label) return false;
+    if (label === undefined) delete c.label;
+    else c.label = label;
+    return true;
+}
+
 export function disconnect(ws: Workspace, connectionId: string): void {
     ws.connections = ws.connections.filter((c) => c.id !== connectionId);
 }
@@ -233,8 +256,10 @@ export function splitConnection(ws: Workspace, registry: Registry, connectionId:
 
     const node = addNode(ws, registry, def.id, { x: at[0] - def.size.w / 2, y: at[1] - def.size.h / 2 });
     disconnect(ws, c.id);
-    connect(ws, c.from, { node: node.id, side: sideToward(at, a) }, 'none');
+    const first = connect(ws, c.from, { node: node.id, side: sideToward(at, a) }, 'none');
     connect(ws, { node: node.id, side: sideToward(at, b) }, c.to, c.arrow);
+    // Подпись остаётся на первой половине: точка поставлена на связь, а не вместо неё.
+    if (c.label !== undefined) first.label = c.label;
     return node;
 }
 
@@ -250,7 +275,9 @@ export function dissolveNode(ws: Workspace, nodeId: string): void {
     for (const i of incoming) {
         for (const o of outgoing) {
             if (!canConnect(ws, i.from, o.to).ok) continue;
-            connect(ws, i.from, o.to, i.arrow === 'end' || o.arrow === 'end' ? 'end' : 'none');
+            const merged = connect(ws, i.from, o.to, i.arrow === 'end' || o.arrow === 'end' ? 'end' : 'none');
+            const label = i.label ?? o.label; // подпись любой из удалённых половин переходит к целой связи
+            if (label !== undefined) merged.label = label;
         }
     }
 }
@@ -326,6 +353,7 @@ export function duplicateNodes(ws: Workspace, registry: Registry, ids: Iterable<
             from: { node: from, side: c.from.side },
             to: { node: to, side: c.to.side },
             arrow: c.arrow,
+            ...(c.label !== undefined ? { label: c.label } : {}),
         });
     }
 

@@ -85,6 +85,7 @@ export function insertNodes(ws: Workspace, source: Workspace, dx: number, dy: nu
             from: { node: from, side: c.from.side },
             to: { node: to, side: c.to.side },
             arrow: c.arrow,
+            ...(c.label !== undefined ? { label: c.label } : {}),
         });
     }
     return created;

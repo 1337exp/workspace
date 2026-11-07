@@ -3,7 +3,7 @@ import { alignNodes, distributeNodes, straightenLink, type AlignKind, type Distr
 import { isNodeColor, type NodeColor } from '@/core/colors';
 import type { Registry } from '@/core/registry';
 import type { Arrow, NodeData, Workspace } from '@/core/types';
-import { disconnect, dissolveNode, duplicateNodes, lowerToBack, raiseToFront, removeNode, reverseConnection, setArrow, splitConnection as split } from '@/core/workspace';
+import { disconnect, dissolveNode, setLabel, duplicateNodes, lowerToBack, raiseToFront, removeNode, reverseConnection, setArrow, splitConnection as split } from '@/core/workspace';
 import { copyText, insertNodes, pasteOffset, readClipboard } from '@/core/clipboard';
 import { addNode } from '@/core/workspace';
 import { isLinkUrl } from '@/nodes/link/url';
@@ -234,6 +234,9 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow, vie
         sel.selectedConnection.value = null;
     }
 
+    /** Подпись связи; пустая убирает подпись. */
+    const setLinkLabel = (connectionId: string, text: string) => setLabel(workspace.value, connectionId, text);
+
     function reverseSelected() {
         if (sel.selectedConnection.value) reverseConnection(workspace.value, sel.selectedConnection.value);
     }
@@ -252,6 +255,7 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow, vie
         setArrowStyle,
         reverseSelected,
         duplicateSelected,
+        setLinkLabel,
         copySelected,
         cutSelected,
         pasteText,

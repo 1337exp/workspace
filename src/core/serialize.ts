@@ -1,7 +1,7 @@
 import { dataVersionOf } from './define';
 import type { Registry } from './registry';
 import type { Anchor, Arrow, Connection, NodeData, NodeInstance, Workspace } from './types';
-import { SIDES } from './workspace';
+import { SIDES, cleanLabel } from './workspace';
 
 export const FORMAT = 'workspace';
 /** Версия формата файла (не путать с версиями данных нод). */
@@ -119,7 +119,8 @@ export function parse(text: string, registry: Registry): ParseResult {
         }
         seen.add(id);
         const arrow: Arrow = isObject(item) && item.arrow === 'end' ? 'end' : 'none';
-        const connection: Connection = { id, from, to, arrow };
+        const label = isObject(item) && typeof item.label === 'string' ? cleanLabel(item.label) : undefined;
+        const connection: Connection = { id, from, to, arrow, ...(label !== undefined ? { label } : {}) };
         workspace.connections.push(connection);
     }
 

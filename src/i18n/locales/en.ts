@@ -38,6 +38,10 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         arrow: 'Arrow',
         reverse: 'Reverse',
         style: 'Link style',
+        label: 'Label',
+        addLabel: 'Add a label',
+        editLabel: 'Edit the label',
+        labelPlaceholder: 'Label…',
     },
 
     palette: {

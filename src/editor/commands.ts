@@ -62,6 +62,14 @@ export function createEditorCommands(editor: Editor) {
 
         { id: 'view.guides', label: () => t('guides.label'), icon: 'view-guides', checked: () => editor.guidesEnabled, run: () => (editor.guidesEnabled = !editor.guidesEnabled) },
 
+        {
+            id: 'link.label',
+            label: () => (link()?.label ? t('link.editLabel') : t('link.addLabel')),
+            icon: 'link-label',
+            shortcut: 'F2',
+            enabled: () => link() !== undefined,
+            run: () => editor.startLabelEdit(),
+        },
         { id: 'link.line', label: () => t('link.line'), group: 'arrow', checked: () => arrow() === 'none', run: () => editor.setArrowStyle('none') },
         { id: 'link.arrow', label: () => t('link.arrow'), group: 'arrow', checked: () => arrow() === 'end', run: () => editor.setArrowStyle('end') },
         { id: 'link.reverse', label: () => t('link.reverse'), icon: 'link-reverse', enabled: () => link() !== undefined, run: () => editor.reverseSelected() },

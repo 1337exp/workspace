@@ -35,6 +35,10 @@ export default {
         arrow: 'Стрелка',
         reverse: 'Развернуть',
         style: 'Вид связи',
+        label: 'Подпись',
+        addLabel: 'Добавить подпись',
+        editLabel: 'Изменить подпись',
+        labelPlaceholder: 'Подпись…',
     },
 
     palette: {

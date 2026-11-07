@@ -105,6 +105,8 @@ export interface Connection {
     to: Anchor;
     /** `end`: стрелка на конце `to`. */
     arrow: Arrow;
+    /** Подпись посередине связи. Нет поля: подписи нет (пустая строка не хранится). */
+    label?: string;
 }
 
 export interface Workspace {

@@ -172,6 +172,9 @@ function setArrow(value: unknown) {
 
             <template v-if="link">
                 <TaoToolbarSeparator v-if="canColor" />
+                <TaoToolbarGroup :label="t('link.label')">
+                    <TaoButton variant="ghost" tone="neutral" :icon="cmd.icon('link.label')" :pressed="!!link?.label" :aria-label="cmd.label('link.label')" :title="cmd.hint('link.label')" @click="cmd.run('link.label')" />
+                </TaoToolbarGroup>
                 <TaoToolbarGroup :label="t('link.style')">
                     <TaoSegmented :model-value="arrow" :aria-label="t('link.style')" @update:model-value="setArrow">
                         <TaoSegmentedOption value="none">{{ t('link.line') }}</TaoSegmentedOption>
