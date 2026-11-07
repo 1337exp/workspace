@@ -1,7 +1,9 @@
 import { computed } from 'vue';
 import type { TaoMenuItem } from '@1337exp/taoui';
+import { formatHotkey } from '@1337exp/taoux/hotkeys';
 import { NODE_COLORS, type NodeColor } from '@/core/colors';
 import { useI18n, type MessageKey } from '@/i18n';
+import { clipboardActions } from './clipboard';
 import { ALIGN_COMMANDS, useCommands } from './commands';
 import { useEditor } from './store';
 
@@ -20,17 +22,28 @@ export function useContextMenu() {
     const cmd = useCommands();
     const { t } = useI18n();
 
-    const menu = (layout: Parameters<typeof cmd.commands.toMenu>[0]) => cmd.commands.toMenu(layout) as TaoMenuItem[];
+    const clip = clipboardActions(editor);
+
+    // Буфер идёт нативными событиями, поэтому у команд нет сочетаний; в меню их подпись добавляем сами.
+    const NATIVE_KEYS: Record<string, string> = { 'edit.copy': 'Mod+C', 'edit.cut': 'Mod+X', 'edit.paste': 'Mod+V' };
+    const menu = (layout: Parameters<typeof cmd.commands.toMenu>[0]) =>
+        (cmd.commands.toMenu(layout) as TaoMenuItem[]).map((item) =>
+            'id' in item && item.id in NATIVE_KEYS && (item.type === undefined || item.type === 'item') ? { ...item, shortcut: formatHotkey(NATIVE_KEYS[item.id]!) } : item,
+        );
 
     const items = computed<TaoMenuItem[]>(() => {
         const target = editor.contextMenu?.target;
         if (!target) return [];
 
+        if (target.kind === 'empty') {
+            return [...menu(['edit.paste', 'edit.selectAll']), SEP, { id: 'palette', label: t('context.addNode'), icon: 'tao-plus' }, ...menu(['view.fit'])];
+        }
+
         if (target.kind === 'link') {
             return menu(['link.line', 'link.arrow', 'link.reverse', 'link.straighten', '-', 'edit.delete']);
         }
 
-        const out: TaoMenuItem[] = menu(['edit.duplicate', 'node.front', 'node.back']);
+        const out: TaoMenuItem[] = menu(['edit.copy', 'edit.cut', 'edit.duplicate', '-', 'node.front', 'node.back']);
 
         // Переключатели типа ноды («Скрыть выполненные», «Крупный текст»): галочки.
         if (editor.nodeActions.length) {
@@ -71,6 +84,12 @@ export function useContextMenu() {
         if (id.startsWith('color:')) {
             const name = id.slice('color:'.length);
             editor.setColor(name === 'none' ? null : (name as NodeColor));
+        } else if (id === 'palette') {
+            const m = editor.contextMenu;
+            if (m) editor.openPalette(m.screen, m.world);
+        } else if (id === 'edit.paste') {
+            // Меню у курсора: вставляемое встаёт центром в точку нажатия.
+            void clip.paste(editor.contextMenu?.world);
         } else if (id.startsWith('action:')) {
             editor.runNodeAction(id.slice('action:'.length));
         } else {

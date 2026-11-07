@@ -13,7 +13,7 @@ const editor = useEditor();
 const cmd = useCommands();
 const { t } = useI18n();
 
-const GESTURES = ['pan', 'zoom', 'marquee', 'link', 'add', 'snap'] as const;
+const GESTURES = ['pan', 'zoom', 'marquee', 'link', 'add', 'clipboard', 'snap'] as const;
 
 // Клавиши показываем у команд, у которых они есть; порядок задан здесь, подписи и сочетания берёт реестр.
 const OTHER = ['tool.cancel', 'edit.undo', 'edit.redo', 'edit.delete', 'view.zoomIn', 'view.zoomOut', 'view.zoom100', 'view.fit', 'file.open', 'file.save'];

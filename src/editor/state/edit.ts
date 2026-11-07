@@ -4,13 +4,18 @@ import { isNodeColor, type NodeColor } from '@/core/colors';
 import type { Registry } from '@/core/registry';
 import type { Arrow, NodeData, Workspace } from '@/core/types';
 import { disconnect, dissolveNode, duplicateNodes, lowerToBack, raiseToFront, removeNode, reverseConnection, setArrow, splitConnection as split } from '@/core/workspace';
+import { copyText, insertNodes, pasteOffset, readClipboard } from '@/core/clipboard';
+import { addNode } from '@/core/workspace';
+import { isLinkUrl } from '@/nodes/link/url';
 import type { SelectionSlice } from './selection';
+import type { ViewSlice } from './view';
 
 interface Deps {
     workspace: Ref<Workspace>;
     registry: Registry;
     selection: SelectionSlice;
     defaultArrow: Ref<Arrow>;
+    view: ViewSlice;
 }
 
 /**
@@ -19,7 +24,7 @@ interface Deps {
  * Content edits: delete, colour, links, alignment, node data. All of them change the workspace, so the store wraps
  * them in `recorded` (a history step); here they are bare.
  */
-export function useEdit({ workspace, registry, selection: sel, defaultArrow }: Deps) {
+export function useEdit({ workspace, registry, selection: sel, defaultArrow, view }: Deps) {
     const { selection } = sel;
 
     /**
@@ -165,6 +170,70 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow }: D
         for (const id of plainSelected().reverse()) lowerToBack(workspace.value, id);
     }
 
+    //--------------------------------------------------
+    // Буфер обмена: сам обмен с браузером в editor/clipboard.ts, здесь только содержимое и вставка.
+
+    /** Текст для буфера: выбранные ноды с вложенным и связями между ними; `null`, если копировать нечего. */
+    const copySelected = (): string | null => copyText(workspace.value, registry, selection);
+
+    /** Вырезать: возвращает текст для буфера и удаляет скопированное. */
+    function cutSelected(): string | null {
+        const text = copySelected();
+        if (text !== null) removeSelected();
+        return text;
+    }
+
+    /** Сколько раз подряд вставили один и тот же текст: каждая следующая копия сдвигается, чтобы не слипаться. */
+    let lastPaste: { text: string; count: number } = { text: '', count: 0 };
+
+    /** Видимая область холста в мировых координатах. */
+    function visibleWorld() {
+        const { x, y, z } = view.camera.value;
+        const { w, h } = view.viewport.value;
+        return { x: -x / z, y: -y / z, w: w / z, h: h / z };
+    }
+
+    /**
+     * Вставка текста из буфера. Ноды из нашего формата вставляются с новыми id и выделяются; адрес становится нодой
+     * «Ссылка», прочий текст нодой «Текст». `at` — мировая точка (меню у курсора), без неё считается по видимой области.
+     * Возвращает вставленные ноды; пустой массив, если вставлять нечего.
+     */
+    function pasteText(text: string, at?: readonly [number, number]) {
+        const content = readClipboard(text, registry);
+        if (!content) return [];
+
+        const repeat = lastPaste.text === text ? lastPaste.count : 0;
+        lastPaste = { text, count: repeat + 1 };
+
+        let created;
+        if (content.kind === 'nodes') {
+            const [dx, dy] = pasteOffset(content.workspace, visibleWorld(), repeat, at);
+            created = insertNodes(workspace.value, content.workspace, Math.round(dx), Math.round(dy));
+        } else {
+            const v = visibleWorld();
+            const center = at ?? ([v.x + v.w / 2 + 24 * repeat, v.y + v.h / 2 + 24 * repeat] as const);
+            const link = !/\s/.test(content.text) && isLinkUrl(content.text);
+            const type = link ? 'link' : 'text';
+            const def = registry.get(type);
+            created = [
+                addNode(workspace.value, registry, type, {
+                    x: Math.round(center[0] - def.size.w / 2),
+                    y: Math.round(center[1] - def.size.h / 2),
+                    data: link ? { url: content.text } : { text: content.text },
+                }),
+            ];
+        }
+        sel.setSelection(created.map((n) => n.id));
+        sel.selectedConnection.value = null;
+        return created;
+    }
+
+    /** Выбрать все ноды. */
+    function selectAll() {
+        sel.setSelection(Object.keys(workspace.value.nodes));
+        sel.selectedConnection.value = null;
+    }
+
     function reverseSelected() {
         if (sel.selectedConnection.value) reverseConnection(workspace.value, sel.selectedConnection.value);
     }
@@ -183,6 +252,10 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow }: D
         setArrowStyle,
         reverseSelected,
         duplicateSelected,
+        copySelected,
+        cutSelected,
+        pasteText,
+        selectAll,
         bringSelectedToFront,
         sendSelectedToBack,
         dropIfEmpty,

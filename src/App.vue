@@ -8,6 +8,7 @@ import ContextBar from '@/editor/components/ContextBar.vue';
 import AppMenu from '@/editor/components/AppMenu.vue';
 import ToolDock from '@/editor/components/ToolDock.vue';
 import ZoomBar from '@/editor/components/ZoomBar.vue';
+import { bindClipboardEvents } from '@/editor/clipboard';
 import { useCommands } from '@/editor/commands';
 import { useEditor } from '@/editor/store';
 
@@ -17,8 +18,15 @@ const { t } = useI18n();
 // Горячие клавиши всех команд на всём окне. / The shortcuts of every command, on the whole window.
 const { commands } = useCommands();
 let unbind: (() => void) | null = null;
-onMounted(() => (unbind = commands.bind(window)));
-onBeforeUnmount(() => unbind?.());
+let unbindClipboard: (() => void) | null = null;
+onMounted(() => {
+    unbind = commands.bind(window);
+    unbindClipboard = bindClipboardEvents(editor);
+});
+onBeforeUnmount(() => {
+    unbind?.();
+    unbindClipboard?.();
+});
 </script>
 
 <template>

@@ -4,6 +4,7 @@ import { matchHotkey } from '@1337exp/taoux/hotkeys';
 import { LOCALE_CODES, LOCALE_NAMES, setLocale, useI18n } from '@/i18n';
 import type { MessageKey } from '@/i18n';
 import type { AlignKind } from '@/core/align';
+import { clipboardActions } from './clipboard';
 import { openFromFile, saveToFile } from './file';
 import { ZOOM_STEP } from './state/view';
 import { SELECT_TOOL } from './state/tool';
@@ -32,6 +33,7 @@ const shortcutsOf = (c: Command): string[] => (c.shortcut === undefined ? [] : t
  */
 export function createEditorCommands(editor: Editor) {
     const { t, nodeTitle, locale } = useI18n();
+    const clip = clipboardActions(editor);
 
     const link = () => editor.workspace.connections.find((c) => c.id === editor.selectedConnection);
     const nodeCount = () => editor.selection.size;
@@ -45,6 +47,12 @@ export function createEditorCommands(editor: Editor) {
 
         { id: 'edit.undo', label: () => t('history.undo'), icon: 'tao-undo', shortcut: 'Mod+Z', enabled: () => editor.canUndo, run: () => editor.undo() },
         { id: 'edit.redo', label: () => t('history.redo'), icon: 'tao-redo', shortcut: ['Mod+Shift+Z', 'Mod+Y'], enabled: () => editor.canRedo, run: () => editor.redo() },
+        // Копировать, вырезать и вставить клавишами идут нативными событиями буфера (editor/clipboard.ts), поэтому
+        // сочетаний у этих команд нет: иначе реестр перехватил бы клавишу раньше. Меню показывает подпись само.
+        { id: 'edit.copy', label: () => t('context.copy'), icon: 'tao-copy', enabled: () => nodeCount() > 0, run: () => void clip.copy() },
+        { id: 'edit.cut', label: () => t('context.cut'), enabled: () => nodeCount() > 0, run: () => void clip.cut() },
+        { id: 'edit.paste', label: () => t('context.paste'), run: () => void clip.paste() },
+        { id: 'edit.selectAll', label: () => t('context.selectAll'), shortcut: 'Mod+A', enabled: () => Object.keys(editor.workspace.nodes).length > 0, run: () => editor.selectAll() },
         { id: 'edit.duplicate', label: () => t('context.duplicate'), icon: 'tao-copy', shortcut: 'Mod+D', enabled: () => nodeCount() > 0, run: () => editor.duplicateSelected() },
         { id: 'node.front', label: () => t('context.front'), icon: 'order-front', shortcut: ']', enabled: () => nodeCount() > 0, run: () => editor.bringSelectedToFront() },
         { id: 'node.back', label: () => t('context.back'), icon: 'order-back', shortcut: '[', enabled: () => nodeCount() > 0, run: () => editor.sendSelectedToBack() },

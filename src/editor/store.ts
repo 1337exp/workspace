@@ -41,12 +41,12 @@ export const useEditor = defineStore('editor', () => {
     const sel = useSelection();
     const prefs = usePrefs();
     const drag = useDrag({ workspace, registry, selection: sel.selection, view, snapEnabled: prefs.snapEnabled, guidesEnabled: prefs.guidesEnabled });
-    const edit = useEdit({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow });
+    const edit = useEdit({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow, view });
     const link = useConnect({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow });
     const place = usePlace({ workspace, registry, selection: sel, view, defaultArrow: prefs.defaultArrow });
 
     /** Открытое контекстное меню: точка на холсте (px) и то, на что нажали. */
-    const contextMenu = ref<{ screen: [number, number]; target: { kind: 'node'; nodeId: string } | { kind: 'link'; id: string } } | null>(null);
+    const contextMenu = ref<{ screen: [number, number]; world: [number, number]; target: { kind: 'node'; nodeId: string } | { kind: 'link'; id: string } | { kind: 'empty' } } | null>(null);
 
     /** Нода, которую правят на месте (текст). Двойной клик или новая нода включают, конец правки выключает. */
     const editingNode = ref<string | null>(null);
@@ -99,18 +99,17 @@ export const useEditor = defineStore('editor', () => {
 
     /**
      * Правый клик по ноде или связи. Нода, не входящая в выделение, становится выделением (как в Figma); входящая
-     * оставляет выделение как есть, и меню действует на всё выделенное. Пустое место меню не открывает (палитра).
+     * оставляет выделение как есть, и меню действует на всё выделенное. У пустого места своё меню (вставить, выбрать всё, добавить ноду).
      */
-    function openContext(screen: [number, number], target: { kind: 'node'; nodeId: string } | { kind: 'link'; id: string } | { kind: 'empty' }): boolean {
-        if (target.kind === 'empty') return false;
+    function openContext(screen: [number, number], target: { kind: 'node'; nodeId: string } | { kind: 'link'; id: string } | { kind: 'empty' }, world: [number, number] = [0, 0]): boolean {
         if (target.kind === 'node') {
             if (!sel.selection.has(target.nodeId)) sel.selectOnly(target.nodeId);
             else sel.selectedConnection.value = null;
-        } else {
+        } else if (target.kind === 'link') {
             sel.selectOnlyConnection(target.id);
-        }
+        } // пустое место: выделение остаётся, меню про вставку и выбор
         place.closePalette();
-        contextMenu.value = { screen, target };
+        contextMenu.value = { screen, world, target };
         return true;
     }
 
@@ -194,6 +193,10 @@ export const useEditor = defineStore('editor', () => {
         straightenSelectedLink: recorded(edit.straightenSelectedLink),
         removeSelected: recorded(edit.removeSelected),
         duplicateSelected: recorded(edit.duplicateSelected),
+        copySelected: edit.copySelected,
+        cutSelected: recorded(edit.cutSelected),
+        pasteText: recorded(edit.pasteText),
+        selectAll: edit.selectAll,
         bringSelectedToFront: recorded(edit.bringSelectedToFront),
         sendSelectedToBack: recorded(edit.sendSelectedToBack),
         setColor: recorded(edit.setColor),

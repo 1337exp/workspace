@@ -113,7 +113,7 @@ describe('контекстное меню и команды порядка', () 
         expect(Object.keys(editor.workspace.nodes)).toEqual([a.id, b.id, g.id, c.id]); // группа: порядок не меняется
     });
 
-    it('openContext: нода вне выделения становится выделением, внутри выделения оно сохраняется, пустое место меню не открывает', () => {
+    it('openContext: нода вне выделения становится выделением, внутри выделения оно сохраняется, пустое место открывает своё меню', () => {
         const { editor } = setup();
         const a = editor.addNodeAtCenter('note');
         const b = editor.addNodeAtCenter('note');
@@ -128,8 +128,12 @@ describe('контекстное меню и команды порядка', () 
 
         editor.closeContext();
         expect(editor.contextMenu).toBeNull();
-        expect(editor.openContext([0, 0], { kind: 'empty' })).toBe(false);
-        expect(editor.contextMenu).toBeNull();
+
+        // Пустое место: своё меню (вставить, выбрать всё), выделение остаётся.
+        editor.setSelection([a.id]);
+        expect(editor.openContext([0, 0], { kind: 'empty' }, [5, 6])).toBe(true);
+        expect(editor.contextMenu).toMatchObject({ target: { kind: 'empty' }, world: [5, 6] });
+        expect([...editor.selection]).toEqual([a.id]);
     });
 
     it('пункты меню зависят от того, на что нажали: у чеклиста есть «Скрыть выполненные», у связи вид и «Развернуть»', () => {

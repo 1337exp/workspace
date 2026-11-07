@@ -52,7 +52,7 @@ export function workspaceCanvasHost(editor: Editor, claimsKey: (event: KeyboardE
             editor.closePalette();
             editor.closeContext();
         },
-        contextMenu: (screen, _world, target) => editor.openContext(screen, target),
+        contextMenu: (screen, world, target) => editor.openContext(screen, target, world),
 
         connect: {
             get origin() {

@@ -22,7 +22,7 @@ npm run screenshot  # docs/media/*.png for the README, needs Chrome or Edge
 
 ## What it does
 
-**Nodes.** Added with a tool in the left dock: press the tool (or its key) and click the canvas, the node lands centred on the click, `Esc` cancels. A right click on an empty place opens the palette.
+**Nodes.** Added with a tool in the left dock: press the tool (or its key) and click the canvas, the node lands centred on the click, `Esc` cancels. A right click on an empty place opens a menu, and "Add node…" in it opens the palette.
 
 | Node | Key | What it is |
 |---|---|---|
@@ -64,7 +64,9 @@ The title in the strip (of a note, group, checklist, link) is edited with a doub
 - **Bottom left:** zoom, the view menu ("Zoom to fit", 100%, grid) and the help "?" with a list of gestures and keys.
 - **Top left:** the ☰ menu (file: "New", "Open" `Ctrl+O`, "Save" `Ctrl+S`; light or dark theme; language) and a quick theme switch.
 
-**Context menu** (a right click on a node or a link; an empty place still opens the palette): "Duplicate" `Ctrl+D` (with what lies inside a group and the links between the copies; the copies get selected), "Bring to front" `]`, "Send to back" `[`, the toggles of the node type, colour, alignment (two or more nodes), "Delete"; for a link its style, "Reverse", "Straighten". A node outside the selection becomes the selection on a right click, a node inside it keeps it, and the menu acts on everything selected. A right button that was dragged pans as before.
+**Context menu** (a right click on a node, a link or an empty place): for a node "Copy" `Ctrl+C`, "Cut" `Ctrl+X`, "Duplicate" `Ctrl+D` (with what lies inside a group and the links between the copies; the copies get selected), "Bring to front" `]`, "Send to back" `[`, the toggles of the node type, colour, alignment (two or more nodes), "Delete"; for a link its style, "Reverse", "Straighten"; for an empty place "Paste" `Ctrl+V` (what is pasted is centred on the click), "Select all" `Ctrl+A`, "Add node…" (the palette), "Zoom to fit". A node outside the selection becomes the selection on a right click, a node inside it keeps it, and the menu acts on everything selected. A right button that was dragged pans as before.
+
+**Clipboard.** `Ctrl+C`, `Ctrl+X`, `Ctrl+V` and the menu items work through the system clipboard: nodes lie in it as plain text in the `workspace.json` format (with what lies inside groups and the links between the copied nodes), so pasting works between tabs and windows. With no nodes picked, and in input fields, the keys do what they did. Paste takes somebody else's text too: an `http(s)` address becomes a Link node, any other text (up to 10,000 characters) a Text node. A repeated paste of the same thing is shifted by 24 px so that copies do not pile up; if what is pasted is outside the visible area it goes to the centre of the screen. If the browser gives no access to the clipboard (menu items, no keys), a message is shown.
 
 Other keys: `Delete` removes the selection, `Ctrl+Z` / `Ctrl+Y` undo and redo, `Esc` drops the tool, then the palette, then the selection. Letter keys work on a Russian layout too.
 
@@ -127,7 +129,7 @@ Look: the Roboto font in `src/assets/font`, our own colours from the `--tao-colo
 
 ## Not yet
 
-Smart guides while dragging, labels on links, nested checklist items, drawing, stickers and comments. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
+Smart guides while dragging, labels on links, nested checklist items, drawing, stickers and comments. Copying images and files, pasting images from the clipboard. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
 
 ## License
 

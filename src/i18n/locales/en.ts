@@ -50,6 +50,11 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
     context: {
         title: 'Actions on the selection',
         duplicate: 'Duplicate',
+        copy: 'Copy',
+        cut: 'Cut',
+        paste: 'Paste',
+        selectAll: 'Select all',
+        addNode: 'Add node…',
         front: 'Bring to front',
         back: 'Send to back',
         nodeActions: 'Node properties',
@@ -84,6 +89,11 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
     grid: {
         label: 'Grid',
         hint: 'Snap to grid. Hold Alt to disable temporarily',
+    },
+
+    clipboard: {
+        denied: 'The browser did not allow access to the clipboard: use Ctrl+C and Ctrl+V',
+        nothing: 'The clipboard holds no nodes and no text that can be pasted',
     },
 
     guides: {
@@ -123,6 +133,7 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         marquee: { label: 'Select with a frame', how: 'Drag over an empty place' },
         link: { label: 'Connect', how: 'Drag from a pin to another node' },
         add: { label: 'Add a node', how: 'A tool on the left, or right click on an empty place' },
+        clipboard: { label: 'Copy and paste', how: 'Ctrl+C, Ctrl+X, Ctrl+V through the system clipboard: works between tabs; text and an address from the clipboard become nodes' },
         snap: { label: 'Without grid snapping', how: 'Hold Alt while dragging' },
     },
 
