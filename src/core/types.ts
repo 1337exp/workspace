@@ -5,6 +5,23 @@ import type { Component } from 'vue';
 export type NodeData = Record<string, unknown>;
 
 /**
+ * Переключатель типа ноды в панели над выделением («Скрыть выполненные», «Крупный текст»). Панель показывает его, когда
+ * выделены ноды только этого типа; нажатие включает или выключает его у всех. Подпись в словаре:
+ * `nodes.<тип>.action.<id>`.
+ * A node type's toggle in the bar over the selection. The bar shows it when only nodes of this type are selected; a
+ * press switches it on or off for all of them. The label is in the dictionary: `nodes.<type>.action.<id>`.
+ */
+export interface NodeAction<D extends NodeData = NodeData> {
+    id: string;
+    /** Имя иконки (см. `src/icons.ts`). */
+    icon: string;
+    /** Включён ли у этой ноды. */
+    get(data: D): boolean;
+    /** Патч данных, который включает (`on`) или выключает переключатель. */
+    set(data: D, on: boolean): Partial<D>;
+}
+
+/**
  * Компонент содержимого ноды получает props `data` и `selected`
  * и сообщает об изменении событием `change` с частичным патчем данных.
  */
@@ -23,6 +40,8 @@ export interface NodeDef<D extends NodeData = NodeData> {
     component: Component;
     /** Имя иконки для `TaoIcon` (встроенная `tao-*` или из `src/icons.ts`), например `node-note`. */
     icon?: string;
+    /** Переключатели в панели над выделением. */
+    actions?: NodeAction<D>[];
     /** Клавиша инструмента в панели слева (`N`). Не задана — без клавиши. */
     hotkey?: string;
     /** Поле `data` с названием ноды: оно показывается в полосе вместо названия типа и правится двойным кликом по полосе. */

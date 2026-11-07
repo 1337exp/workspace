@@ -46,6 +46,7 @@ export default {
 
     context: {
         title: 'Действия над выделенным',
+        nodeActions: 'Свойства ноды',
         color: 'Цвет',
         noColor: 'Без цвета',
         delete: 'Удалить',
@@ -121,7 +122,8 @@ export default {
 
     nodes: {
         note: { placeholder: 'Текст заметки…' },
-        text: { placeholder: 'Текст' },
+        text: { placeholder: 'Текст', action: { large: 'Крупный текст' } },
+        checklist: { item: 'Пункт', add: 'Добавить пункт', progress: '{0} из {1}', action: { hideDone: 'Скрыть выполненные' } },
         image: {
             placeholder: 'Ссылка на картинку',
             empty: 'Вставь ссылку на картинку',
@@ -134,6 +136,7 @@ export default {
         nodes: {
             note: { title: 'Заметка' },
             text: { title: 'Текст' },
+            checklist: { title: 'Чеклист' },
             image: { title: 'Картинка' },
             group: { title: 'Группа' },
             reroute: { title: 'Точка' },

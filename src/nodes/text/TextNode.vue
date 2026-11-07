@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n';
  * Text on the canvas. Normally just lines (draggable anywhere); a double click, or at once for a new node, starts
  * in-place editing. The node height follows the text: the component reports the height it needs with `fit`.
  */
-const props = defineProps<{ data: { text: string }; selected: boolean; editing?: boolean }>();
+const props = defineProps<{ data: { text: string; large?: boolean }; selected: boolean; editing?: boolean }>();
 const emit = defineEmits<{ change: [patch: { text: string }]; 'edit-end': []; fit: [height: number] }>();
 
 const { t } = useI18n();
@@ -62,7 +62,7 @@ function onInput(e: Event) {
 </script>
 
 <template>
-    <div ref="root" class="text-root">
+    <div ref="root" class="text-root" :class="{ large: data.large }">
         <textarea
             v-if="editing"
             ref="field"
@@ -99,6 +99,10 @@ function onInput(e: Event) {
     line-height: 1.3;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+
+.large .text {
+    font-size: 32px;
 }
 
 .view {

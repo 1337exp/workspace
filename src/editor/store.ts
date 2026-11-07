@@ -158,6 +158,8 @@ export const useEditor = defineStore('editor', () => {
 
         // правки
         colorable: edit.colorable,
+        nodeActions: edit.nodeActions,
+        runNodeAction: recorded(edit.runNodeAction),
         selectionColor: edit.selectionColor,
         alignSelected: recorded(edit.alignSelected),
         distributeSelected: recorded(edit.distributeSelected),

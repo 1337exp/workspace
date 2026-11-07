@@ -6,7 +6,7 @@ import { coarse } from '@1337exp/taoux/touch';
 import { selectionBounds } from '@/core/bounds';
 import { NODE_COLORS, type NodeColor } from '@/core/colors';
 import type { Arrow } from '@/core/types';
-import { useI18n } from '@/i18n';
+import { useI18n, type MessageKey } from '@/i18n';
 import { ALIGN_COMMANDS, useCommands } from '../commands';
 import { floatingPosition } from '../floating';
 import { useEditor } from '../store';
@@ -91,6 +91,9 @@ const visible = computed(() => hasSelection.value && !(coarse.value && typing.va
 
 const active = (color: NodeColor | null) => editor.selectionColor === color;
 
+/** Подпись переключателя типа ноды: `nodes.<тип>.action.<id>` в словаре. */
+const actionLabel = (a: { type: string; id: string }) => t(`nodes.${a.type}.action.${a.id}` as MessageKey);
+
 function setArrow(value: unknown) {
     if (value === 'none') cmd.run('link.line');
     else if (value === 'end') cmd.run('link.arrow');
@@ -123,8 +126,25 @@ function setArrow(value: unknown) {
                 </div>
             </TaoToolbarGroup>
 
-            <template v-if="nodeCount > 1">
+            <template v-if="editor.nodeActions.length">
                 <TaoToolbarSeparator v-if="canColor" />
+                <TaoToolbarGroup :label="t('context.nodeActions')">
+                    <TaoButton
+                        v-for="a in editor.nodeActions"
+                        :key="a.id"
+                        variant="ghost"
+                        tone="neutral"
+                        :icon="a.icon"
+                        :pressed="a.checked"
+                        :aria-label="actionLabel(a)"
+                        :title="actionLabel(a)"
+                        @click="editor.runNodeAction(a.id)"
+                    />
+                </TaoToolbarGroup>
+            </template>
+
+            <template v-if="nodeCount > 1">
+                <TaoToolbarSeparator v-if="canColor || editor.nodeActions.length" />
                 <TaoToolbarGroup :label="t('context.align.title')">
                     <TaoButton
                         v-for="a in ALIGN_COMMANDS"

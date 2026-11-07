@@ -49,6 +49,7 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
 
     context: {
         title: 'Actions on the selection',
+        nodeActions: 'Node properties',
         color: 'Color',
         noColor: 'No color',
         delete: 'Delete',
@@ -124,7 +125,8 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
 
     nodes: {
         note: { placeholder: 'Note text…' },
-        text: { placeholder: 'Text' },
+        text: { placeholder: 'Text', action: { large: 'Large text' } },
+        checklist: { item: 'Item', add: 'Add item', progress: '{0} of {1}', action: { hideDone: 'Hide completed' } },
         image: {
             placeholder: 'Image URL',
             empty: 'Paste an image URL',

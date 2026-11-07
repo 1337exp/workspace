@@ -9,9 +9,10 @@ export default defineNode({
     icon: 'node-text',
     hotkey: 'T',
     size: { w: 220, h: 36, minW: 60, minH: 32 },
-    create: () => ({ text: '' }),
+    create: () => ({ text: '', large: false }),
     bare: true,
     inlineEdit: true,
+    actions: [{ id: 'large', icon: 'text-large', get: (data) => data.large === true, set: (_data, on) => ({ large: on }) }],
     isEmpty: (data) => typeof data.text !== 'string' || data.text.trim() === '',
     component: TextNode,
 });

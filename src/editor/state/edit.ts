@@ -120,6 +120,29 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow }: D
         if (node.h !== next) node.h = next;
     }
 
+    /**
+     * Переключатели, общие для выделения: показываются, когда выделены ноды одного типа, у которого они есть.
+     * `checked` — включён у всех выделенных.
+     */
+    const nodeActions = computed(() => {
+        const nodes = [...selection].map((id) => workspace.value.nodes[id]).filter((n) => n !== undefined);
+        const types = new Set(nodes.map((n) => n.type));
+        const def = types.size === 1 ? registry.find([...types][0]!) : undefined;
+        return (def?.actions ?? []).map((a) => ({ id: a.id, icon: a.icon, type: def!.id, checked: nodes.every((n) => a.get(n.data)) }));
+    });
+
+    /** Нажатие на переключатель: если он включён у всех, выключает у всех, иначе включает у всех. */
+    function runNodeAction(actionId: string) {
+        const current = nodeActions.value.find((a) => a.id === actionId);
+        if (!current) return;
+        const action = registry.get(current.type).actions?.find((a) => a.id === actionId);
+        if (!action) return;
+        for (const id of selection) {
+            const node = workspace.value.nodes[id];
+            if (node) Object.assign(node.data, action.set(node.data, !current.checked));
+        }
+    }
+
     function reverseSelected() {
         if (sel.selectedConnection.value) reverseConnection(workspace.value, sel.selectedConnection.value);
     }
@@ -139,5 +162,7 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow }: D
         reverseSelected,
         dropIfEmpty,
         fitHeight,
+        nodeActions,
+        runNodeAction,
     };
 }

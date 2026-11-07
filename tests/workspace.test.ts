@@ -20,7 +20,7 @@ describe('workspace', () => {
     }
 
     it('реестр подхватывает ноды из папок nodes/', () => {
-        expect(registry.all().map((d) => d.id).sort()).toEqual(['group', 'image', 'note', 'reroute', 'text']);
+        expect(registry.all().map((d) => d.id).sort()).toEqual(['checklist', 'group', 'image', 'note', 'reroute', 'text']);
     });
 
     it('новая нода получает размер и данные из определения', () => {
