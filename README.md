@@ -67,7 +67,7 @@ The title in the strip (of a note, group, checklist, link) is edited with a doub
 
 Other keys: `Delete` removes the selection, `Ctrl+Z` / `Ctrl+Y` undo and redo, `Esc` drops the tool, then the palette, then the selection. Letter keys work on a Russian layout too.
 
-**Touch (a tablet).** A finger moves the canvas, two fingers move and zoom, a long press on an empty place opens the palette, a double tap works as a double click, the "Select" mode in the left dock stands in for `Ctrl`. A pen counts as a mouse. Details and a checklist for testing: [docs/touch.md](docs/touch.md) (in Russian). `?debug=touch` in the address shows the recognised gestures.
+**Touch (a tablet).** A finger moves the canvas, two fingers move and zoom, a long press on an empty place opens the palette and on a node or a link the context menu, a double tap works as a double click, the "Select" mode in the left dock stands in for `Ctrl`. A pen counts as a mouse. Details and a checklist for testing: [docs/touch.md](docs/touch.md) (in Russian). `?debug=touch` in the address shows the recognised gestures.
 
 **Saving.** The workspace is saved automatically to `localStorage`; "Save" and "Open" work with a `workspace.json` file. The theme and grid snapping are remembered in the browser and are not written to the file.
 
@@ -126,7 +126,7 @@ Look: the Roboto font in `src/assets/font`, our own colours from the `--tao-colo
 
 ## Not yet
 
-A context menu on touch (a long press on a node), smart guides while dragging, labels on links, nested checklist items, drawing, stickers and comments. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
+Smart guides while dragging, labels on links, nested checklist items, drawing, stickers and comments. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
 
 ## License
 
