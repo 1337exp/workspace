@@ -25,6 +25,9 @@ const targetValid = computed(() => editor.pending?.valid !== false);
 
 const onChange = (patch: NodeData) => editor.patchData(props.node.id, patch);
 
+/** Содержимое ноды правят на месте (текст): сразу после создания или после двойного клика. */
+const inlineEditing = computed(() => editor.editingNode === props.node.id);
+
 /** Цвет ноды (если известный): CSS-переменная `--tint` тонирует рамку и полосу (у группы ещё и заливку). */
 const tint = computed(() => (isNodeColor(props.node.color) ? props.node.color : null));
 const nodeStyle = computed(() => ({
@@ -78,12 +81,25 @@ function finishTitle(save: boolean) {
     <div
         v-else
         class="node"
-        :class="{ selected, unknown: !def, container: def?.container, tinted: tint }"
+        :class="{ selected, unknown: !def, container: def?.container, tinted: tint, bare: def?.bare }"
         :data-node-id="node.id"
         :data-node-container="def?.container ? '' : undefined"
         :style="nodeStyle"
     >
-        <div class="frame">
+        <!-- Без рамки (текст): содержимое прямо на холсте, правка на месте. -->
+        <div v-if="def?.bare" class="bare-content">
+            <component
+                :is="def.component"
+                :data="node.data"
+                :selected="selected"
+                :editing="inlineEditing"
+                @change="onChange"
+                @edit-end="editor.endEdit(node.id)"
+                @fit="(height: number) => editor.fitHeight(node.id, height)"
+            />
+        </div>
+
+        <div v-else class="frame">
             <header class="bar" data-node-handle>
                 <i class="grip" />
                 <input
@@ -183,6 +199,19 @@ function finishTitle(save: boolean) {
 
 .node.unknown .frame {
     border-style: dashed;
+}
+
+/* Нода без рамки (текст): цвет ноды красит сам текст, выделение рисуется контуром. */
+.bare-content {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    color: var(--tint, var(--tao-color-text-strong));
+}
+
+.node.bare.selected .bare-content {
+    outline: 1px solid var(--tao-color-accent);
+    outline-offset: 2px;
 }
 
 /* Полоса, за которую таскают ноду. Точка слева — маркер «здесь можно тянуть». */

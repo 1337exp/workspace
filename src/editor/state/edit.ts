@@ -94,6 +94,32 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow }: D
         else defaultArrow.value = arrow;
     }
 
+    /**
+     * После правки на месте: пустая нода (по `isEmpty` её определения) удаляется. Возвращает, удалена ли.
+     * After in-place editing: an empty node (by its definition's `isEmpty`) is removed. Returns whether it was.
+     */
+    function dropIfEmpty(nodeId: string): boolean {
+        const node = workspace.value.nodes[nodeId];
+        if (!node || !registry.find(node.type)?.isEmpty?.(node.data)) return false;
+        removeNode(workspace.value, nodeId);
+        selection.delete(nodeId);
+        return true;
+    }
+
+    /**
+     * Высота ноды следует за содержимым (текст): не меньше минимума типа. В историю не пишется: это следствие текста,
+     * а не отдельная правка.
+     * The node height follows its content (text): not below the type's minimum. Not recorded in history: it follows from
+     * the text, it is not an edit of its own.
+     */
+    function fitHeight(nodeId: string, height: number) {
+        const node = workspace.value.nodes[nodeId];
+        if (!node) return;
+        const min = registry.find(node.type)?.size.minH ?? 0;
+        const next = Math.max(min, Math.ceil(height));
+        if (node.h !== next) node.h = next;
+    }
+
     function reverseSelected() {
         if (sel.selectedConnection.value) reverseConnection(workspace.value, sel.selectedConnection.value);
     }
@@ -111,5 +137,7 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow }: D
         patchData,
         setArrowStyle,
         reverseSelected,
+        dropIfEmpty,
+        fitHeight,
     };
 }

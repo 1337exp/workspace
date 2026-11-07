@@ -71,6 +71,8 @@ export function workspaceCanvasHost(editor: Editor, claimsKey: (event: KeyboardE
                 editor.splitConnection(target.id, target.at);
             } else if (editor.registry.find(editor.workspace.nodes[target.nodeId]?.type ?? '')?.titleKey) {
                 editor.titleEditing = target.nodeId;
+            } else {
+                editor.startEdit(target.nodeId);
             }
         },
 

@@ -16,6 +16,8 @@ interface Deps {
     selection: SelectionSlice;
     place: PlaceSlice;
     snapEnabled: Ref<boolean>;
+    /** Нода, которую сейчас правят на месте. */
+    editingNode: Ref<string | null>;
 }
 
 /**
@@ -24,7 +26,7 @@ interface Deps {
  * The current tool of the left dock. "Select" is the normal state; a node tool waits for a click on the canvas,
  * puts the node there and returns to select on its own (as in Figma and FigJam). Esc cancels.
  */
-export function useTool({ workspace, registry, selection, place, snapEnabled }: Deps) {
+export function useTool({ workspace, registry, selection, place, snapEnabled, editingNode }: Deps) {
     const tool = ref<ToolId>(SELECT_TOOL);
     /** Включён инструмент «поставить». / A "place" tool is armed. */
     const placing = computed(() => tool.value !== SELECT_TOOL && registry.find(tool.value) !== undefined);
@@ -44,6 +46,8 @@ export function useTool({ workspace, registry, selection, place, snapEnabled }: 
         const fit = (v: number) => (snapEnabled.value ? Math.round(v / GRID) * GRID : Math.round(v));
         const node = addNode(workspace.value, registry, def.id, { x: fit(world[0] - def.size.w / 2), y: fit(world[1] - def.size.h / 2) });
         selection.selectOnly(node.id);
+        // Текст и ему подобные сразу ждут ввода.
+        if (def.inlineEdit) editingNode.value = node.id;
         tool.value = SELECT_TOOL;
         return node;
     }

@@ -17,6 +17,7 @@ export function registerAppIcons() {
 
         // ноды
         'node-note': { body: '<path d="M5 4h14v10l-5 6H5z"/><path d="M14 20v-6h5"/>' },
+        'node-text': { body: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>' },
         'node-image': { body: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>' },
         'node-group': { body: '<rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="3 3"/>' },
 

@@ -124,6 +124,7 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
 
     nodes: {
         note: { placeholder: 'Note text…' },
+        text: { placeholder: 'Text' },
         image: {
             placeholder: 'Image URL',
             empty: 'Paste an image URL',

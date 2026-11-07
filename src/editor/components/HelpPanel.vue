@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useI18n } from '@/i18n';
 import { useCommands } from '../commands';
+import { useEditor } from '../store';
 
 /**
  * Справка: жесты мыши и тачпада (текст из словаря) и горячие клавиши (из реестра команд, поэтому всегда
@@ -8,14 +9,18 @@ import { useCommands } from '../commands';
  * Help: mouse and trackpad gestures (text from the dictionary) and hotkeys (from the command registry, so always
  * current). Shown in the popover of the "?" button.
  */
+const editor = useEditor();
 const cmd = useCommands();
 const { t } = useI18n();
 
 const GESTURES = ['pan', 'zoom', 'marquee', 'link', 'add', 'snap'] as const;
 
 // Клавиши показываем у команд, у которых они есть; порядок задан здесь, подписи и сочетания берёт реестр.
-const HOTKEYS = ['tool.select', 'tool.place.note', 'tool.place.image', 'tool.place.group', 'tool.cancel', 'edit.undo', 'edit.redo', 'edit.delete', 'view.zoomIn', 'view.zoomOut', 'view.zoom100', 'view.fit', 'file.open', 'file.save'];
-const hotkeys = () => HOTKEYS.filter((id) => cmd.commands.has(id) && cmd.shortcutLabel(id));
+const OTHER = ['tool.cancel', 'edit.undo', 'edit.redo', 'edit.delete', 'view.zoomIn', 'view.zoomOut', 'view.zoom100', 'view.fit', 'file.open', 'file.save'];
+const hotkeys = () =>
+    ['tool.select', ...editor.registry.all().filter((d) => !d.point).map((d) => `tool.place.${d.id}`), ...OTHER].filter(
+        (id) => cmd.commands.has(id) && cmd.shortcutLabel(id),
+    );
 </script>
 
 <template>

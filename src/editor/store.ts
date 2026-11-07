@@ -45,7 +45,9 @@ export const useEditor = defineStore('editor', () => {
     const link = useConnect({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow });
     const place = usePlace({ workspace, registry, selection: sel, view, defaultArrow: prefs.defaultArrow });
 
-    const tool = useTool({ workspace, registry, selection: sel, place, snapEnabled: prefs.snapEnabled });
+    /** Нода, которую правят на месте (текст). Двойной клик или новая нода включают, конец правки выключает. */
+    const editingNode = ref<string | null>(null);
+    const tool = useTool({ workspace, registry, selection: sel, place, snapEnabled: prefs.snapEnabled, editingNode });
 
     /** Нода, у которой сейчас правится название (двойной клик по полосе). */
     const titleEditing = ref<string | null>(null);
@@ -79,6 +81,7 @@ export const useEditor = defineStore('editor', () => {
         },
         onReset() {
             sel.clearSelection();
+            editingNode.value = null;
             dropStale();
         },
         onRestore(ws) {
@@ -90,10 +93,25 @@ export const useEditor = defineStore('editor', () => {
 
     const { recorded } = session;
 
+    function startEdit(id: string) {
+        if (registry.find(workspace.value.nodes[id]?.type ?? '')?.inlineEdit) editingNode.value = id;
+    }
+
+    // Пустую ноду удаляет отдельный шаг истории: появление и исчезновение пустого текста остаются отдельными правками.
+    const dropEmpty = recorded((id: string) => edit.dropIfEmpty(id));
+    function endEdit(id: string) {
+        if (editingNode.value === id) editingNode.value = null;
+        dropEmpty(id);
+    }
+
     return {
         registry,
         workspace,
         titleEditing,
+        editingNode,
+        startEdit,
+        endEdit,
+        fitHeight: edit.fitHeight,
 
         // вид
         camera: view.camera,

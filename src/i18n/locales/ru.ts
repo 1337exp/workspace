@@ -121,6 +121,7 @@ export default {
 
     nodes: {
         note: { placeholder: 'Текст заметки…' },
+        text: { placeholder: 'Текст' },
         image: {
             placeholder: 'Ссылка на картинку',
             empty: 'Вставь ссылку на картинку',
@@ -132,6 +133,7 @@ export default {
     nodeTexts: {
         nodes: {
             note: { title: 'Заметка' },
+            text: { title: 'Текст' },
             image: { title: 'Картинка' },
             group: { title: 'Группа' },
             reroute: { title: 'Точка' },
