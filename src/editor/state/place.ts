@@ -73,3 +73,5 @@ export function usePlace({ workspace, registry, selection, view, defaultArrow }:
 
     return { palette, openPalette, closePalette, addNodeAtCenter, createFromPalette };
 }
+
+export type PlaceSlice = ReturnType<typeof usePlace>;

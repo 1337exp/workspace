@@ -5,6 +5,7 @@ export default defineNode({
     id: 'note',
     title: 'Note',
     icon: 'node-note',
+    hotkey: 'N',
     size: { w: 240, h: 160, minW: 120, minH: 80 },
     create: () => ({ text: '' }),
     component: NoteNode,

@@ -1,21 +1,31 @@
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { TaoButton, TaoIcon, TaoSegmented, TaoSegmentedOption } from '@1337exp/taoui';
+import { computed, nextTick, type CSSProperties, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { TaoButton, TaoSegmented, TaoSegmentedOption, TaoToolbar, TaoToolbarGroup, TaoToolbarSeparator } from '@1337exp/taoui';
+import { worldToScreen } from '@1337exp/taoux/camera';
+import { coarse } from '@1337exp/taoux/touch';
+import { selectionBounds } from '@/core/bounds';
 import { NODE_COLORS, type NodeColor } from '@/core/colors';
 import type { Arrow } from '@/core/types';
 import { useI18n } from '@/i18n';
 import { ALIGN_COMMANDS, useCommands } from '../commands';
+import { floatingPosition } from '../floating';
 import { useEditor } from '../store';
-import { coarse } from '@1337exp/taoux/touch';
 
 /**
- * Панель действий над выделенным, закреплённая у нижнего края экрана. Не привязана к ноде и не зависит от
- * масштаба, одинаково работает мышью и пальцем, действие применяется ко всем выделенным. Показывается, пока
- * выделена хотя бы нода или связь.
+ * Панель действий над выделенным: цвет, выравнивание, вид связи, удаление. Действие применяется ко всем выделенным.
+ * Мышью панель висит над выделением (под ним, если сверху нет места) и едет за ним; на сенсоре и на узком экране она
+ * закреплена внизу, чтобы палец её не заслонял и она не прыгала. Показывается, пока выделена нода или связь.
+ *
+ * The action bar over the selection: colour, alignment, link style, delete. An action applies to everything selected.
+ * With a mouse the bar hangs over the selection (under it when there is no room above) and follows it; on touch and
+ * on a narrow screen it is pinned at the bottom, so a finger does not cover it and it does not jump.
  */
 const editor = useEditor();
 const cmd = useCommands();
 const { t } = useI18n();
+
+/** Уже этого экран считается узким: панель закрепляется внизу. */
+const NARROW = 640;
 
 const link = computed(() => editor.workspace.connections.find((c) => c.id === editor.selectedConnection) ?? null);
 const nodeCount = computed(() => editor.selection.size);
@@ -23,21 +33,58 @@ const hasSelection = computed(() => nodeCount.value > 0 || link.value !== null);
 const canColor = computed(() => editor.colorable.length > 0);
 const arrow = computed<Arrow>(() => link.value?.arrow ?? 'none');
 
-// Экранная клавиатура на сенсоре закрыла бы панель, поэтому на время набора текста она прячется.
 const bar = ref<HTMLElement | null>(null);
+
+// Экранная клавиатура на сенсоре закрыла бы панель, поэтому на время набора текста она прячется.
 const typing = ref(false);
 function onFocusChange() {
     const el = document.activeElement;
     const field = el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
     typing.value = field && !bar.value?.contains(el);
 }
+
+//--------------------------------------------------
+// Положение: плавающее (мышь, широкий экран) или внизу.
+
+const floating = computed(() => !coarse.value && editor.viewport.w >= NARROW);
+
+const size = ref({ w: 0, h: 0 });
+let observer: ResizeObserver | null = null;
+function measure() {
+    const el = bar.value;
+    if (el) size.value = { w: el.offsetWidth, h: el.offsetHeight };
+}
+
 onMounted(() => {
     window.addEventListener('focusin', onFocusChange);
     window.addEventListener('focusout', onFocusChange);
+    observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
 });
-onUnmounted(() => {
+onBeforeUnmount(() => {
     window.removeEventListener('focusin', onFocusChange);
     window.removeEventListener('focusout', onFocusChange);
+    observer?.disconnect();
+});
+
+// Панель появляется и исчезает вместе с выделением: следим за новым элементом и меряем его сразу.
+watch(bar, async (el, old) => {
+    if (old) observer?.unobserve(old);
+    if (!el) return;
+    observer?.observe(el);
+    await nextTick();
+    measure();
+});
+
+const style = computed<CSSProperties>(() => {
+    if (!floating.value) return {};
+    const rect = selectionBounds(editor.workspace, editor.selection, editor.selectedConnection);
+    if (!rect) return {};
+
+    const [x0, y0] = worldToScreen(editor.camera, rect.x, rect.y);
+    const [x1, y1] = worldToScreen(editor.camera, rect.x + rect.w, rect.y + rect.h);
+    const { left, top } = floatingPosition({ x0, y0, x1, y1 }, size.value, editor.viewport);
+    // Пока размер не измерен, панель не показываем: иначе она мигнёт в неверном месте.
+    return { left: `${left}px`, top: `${top}px`, visibility: size.value.w > 0 ? 'visible' : 'hidden' } as const;
 });
 
 const visible = computed(() => hasSelection.value && !(coarse.value && typing.value));
@@ -51,95 +98,103 @@ function setArrow(value: unknown) {
 </script>
 
 <template>
-    <div v-if="visible" ref="bar" class="context" @pointerdown.stop @wheel.stop @contextmenu.prevent>
-        <template v-if="canColor">
-            <span v-if="nodeCount > 1" class="count">{{ t('context.selected', [nodeCount]) }}</span>
+    <div v-if="visible" ref="bar" class="context" :class="{ floating }" :style="style" @pointerdown.stop @wheel.stop @contextmenu.prevent>
+        <TaoToolbar :label="t('context.title')">
+            <TaoToolbarGroup v-if="canColor" :label="t('context.color')">
+                <span v-if="nodeCount > 1" class="count">{{ t('context.selected', [nodeCount]) }}</span>
+                <div class="swatches" role="group" :aria-label="t('context.color')">
+                    <button
+                        class="swatch none"
+                        :class="{ active: active(null) }"
+                        :title="t('context.noColor')"
+                        :aria-label="t('context.noColor')"
+                        @click="editor.setColor(null)"
+                    />
+                    <button
+                        v-for="color in NODE_COLORS"
+                        :key="color"
+                        class="swatch"
+                        :class="{ active: active(color) }"
+                        :style="{ '--swatch': `var(--tint-${color})` }"
+                        :title="t(`context.colors.${color}`)"
+                        :aria-label="t(`context.colors.${color}`)"
+                        @click="editor.setColor(color)"
+                    />
+                </div>
+            </TaoToolbarGroup>
 
-            <div class="swatches" role="group" :aria-label="t('context.color')">
-                <button
-                    class="swatch none"
-                    :class="{ active: active(null) }"
-                    :title="t('context.noColor')"
-                    :aria-label="t('context.noColor')"
-                    @click="editor.setColor(null)"
-                />
-                <button
-                    v-for="color in NODE_COLORS"
-                    :key="color"
-                    class="swatch"
-                    :class="{ active: active(color) }"
-                    :style="{ '--swatch': `var(--tint-${color})` }"
-                    :title="t(`context.colors.${color}`)"
-                    :aria-label="t(`context.colors.${color}`)"
-                    @click="editor.setColor(color)"
-                />
-            </div>
-        </template>
+            <template v-if="nodeCount > 1">
+                <TaoToolbarSeparator v-if="canColor" />
+                <TaoToolbarGroup :label="t('context.align.title')">
+                    <TaoButton
+                        v-for="a in ALIGN_COMMANDS"
+                        :key="a.kind"
+                        variant="ghost"
+                        tone="neutral"
+                        :icon="cmd.icon('align.' + a.kind)"
+                        :aria-label="cmd.label('align.' + a.kind)"
+                        @click="cmd.run('align.' + a.kind)"
+                    />
+                </TaoToolbarGroup>
+                <TaoToolbarGroup :label="t('context.align.distribute')">
+                    <TaoButton
+                        v-for="id in ['align.distributeX', 'align.distributeY']"
+                        :key="id"
+                        variant="ghost"
+                        tone="neutral"
+                        :icon="cmd.icon(id)"
+                        :disabled="!cmd.enabled(id)"
+                        :aria-label="cmd.label(id)"
+                        @click="cmd.run(id)"
+                    />
+                </TaoToolbarGroup>
+            </template>
 
-        <div v-if="nodeCount > 1" class="tools" role="group" :aria-label="t('context.align.title')">
-            <button
-                v-for="a in ALIGN_COMMANDS"
-                :key="a.kind"
-                class="tool"
-                :title="t(`context.align.${a.kind}`)"
-                :aria-label="t(`context.align.${a.kind}`)"
-                @click="cmd.run('align.' + a.kind)"
-            >
-                <TaoIcon :name="cmd.icon('align.' + a.kind)!" />
-            </button>
-            <span class="gap" />
-            <button class="tool" :disabled="!cmd.enabled('align.distributeX')" :title="cmd.label('align.distributeX')" :aria-label="cmd.label('align.distributeX')" @click="cmd.run('align.distributeX')">
-                <TaoIcon name="distribute-x" />
-            </button>
-            <button class="tool" :disabled="!cmd.enabled('align.distributeY')" :title="cmd.label('align.distributeY')" :aria-label="cmd.label('align.distributeY')" @click="cmd.run('align.distributeY')">
-                <TaoIcon name="distribute-y" />
-            </button>
-        </div>
+            <template v-if="link">
+                <TaoToolbarSeparator v-if="canColor" />
+                <TaoToolbarGroup :label="t('link.style')">
+                    <TaoSegmented :model-value="arrow" :aria-label="t('link.style')" @update:model-value="setArrow">
+                        <TaoSegmentedOption value="none">{{ t('link.line') }}</TaoSegmentedOption>
+                        <TaoSegmentedOption value="end">{{ t('link.arrow') }} →</TaoSegmentedOption>
+                    </TaoSegmented>
+                    <TaoButton variant="ghost" tone="neutral" :icon="cmd.icon('link.reverse')" :aria-label="cmd.label('link.reverse')" :title="cmd.label('link.reverse')" @click="cmd.run('link.reverse')" />
+                    <TaoButton variant="ghost" tone="neutral" :icon="cmd.icon('link.straighten')" :aria-label="cmd.label('link.straighten')" :title="t('context.straightenHint')" @click="cmd.run('link.straighten')" />
+                </TaoToolbarGroup>
+            </template>
 
-        <template v-if="link">
-            <TaoSegmented :model-value="arrow" size="small" @update:model-value="setArrow">
-                <TaoSegmentedOption value="none">{{ t('link.line') }}</TaoSegmentedOption>
-                <TaoSegmentedOption value="end">{{ t('link.arrow') }} →</TaoSegmentedOption>
-            </TaoSegmented>
-            <TaoButton variant="secondary" size="small" icon="link-reverse" @click="cmd.run('link.reverse')">{{ t('link.reverse') }}</TaoButton>
-            <TaoButton variant="secondary" size="small" icon="link-straighten" :title="t('context.straightenHint')" @click="cmd.run('link.straighten')">
-                {{ t('context.straighten') }}
-            </TaoButton>
-        </template>
-
-        <span v-if="canColor || link || nodeCount > 1" class="sep" />
-
-        <TaoButton variant="secondary" tone="danger" size="small" icon="tao-trash" :title="cmd.hint('edit.delete')" @click="cmd.run('edit.delete')">
-            {{ t('context.delete') }}
-        </TaoButton>
+            <TaoToolbarSeparator />
+            <TaoToolbarGroup>
+                <TaoButton variant="ghost" tone="danger" :icon="cmd.icon('edit.delete')" :aria-label="cmd.label('edit.delete')" :shortcut="cmd.shortcutLabel('edit.delete')" @click="cmd.run('edit.delete')" />
+            </TaoToolbarGroup>
+        </TaoToolbar>
     </div>
 </template>
 
 <style scoped>
 .context {
     position: absolute;
-    bottom: max(14px, env(safe-area-inset-bottom));
-    /* По центру без transform: при left: 50% доступная ширина всего половина контейнера, и панель сворачивалась бы в несколько рядов. */
+    z-index: 10;
+    /* Внизу (сенсор, узкий экран): по центру, над зум-баром. По центру без transform: при left: 50% доступная ширина
+       всего половина контейнера, и панель сворачивалась бы в несколько рядов. */
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 60px);
     left: 12px;
     right: 12px;
     margin-inline: auto;
     width: max-content;
-    z-index: 10;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
     max-width: calc(100% - 24px);
-    padding: 8px 12px;
-    border: 1px solid var(--tao-color-border-strong, #4b5563);
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--tao-color-surface-raised, #1f2937) 96%, transparent);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Плавающая: left и top задаёт положение у выделения. */
+.context.floating {
+    right: auto;
+    bottom: auto;
+    margin-inline: 0;
+    max-width: calc(100% - 88px);
 }
 
 .count {
-    color: var(--tao-color-text-muted, #9ca3af);
+    padding-inline: 4px;
+    color: var(--tao-color-text-muted);
     font-size: 12px;
     white-space: nowrap;
 }
@@ -148,13 +203,14 @@ function setArrow(value: unknown) {
     display: flex;
     align-items: center;
     gap: 6px;
+    padding-inline: 4px;
 }
 
 .swatch {
     position: relative;
     box-sizing: border-box;
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     padding: 0;
     border: 2px solid transparent;
     border-radius: 50%;
@@ -168,80 +224,34 @@ function setArrow(value: unknown) {
 }
 
 .swatch.active {
-    border-color: var(--tao-color-text-strong, #fff);
-    box-shadow: 0 0 0 2px var(--tao-color-accent, #f59e0b);
+    border-color: var(--tao-color-text-strong);
+    box-shadow: 0 0 0 2px var(--tao-color-accent);
 }
 
 /* «Без цвета»: пустой кружок с чертой. */
 .swatch.none {
-    border-color: var(--tao-color-text-muted, #9ca3af);
+    border-color: var(--tao-color-text-muted);
     background: transparent;
 }
 
 .swatch.none::after {
     content: '';
     position: absolute;
-    inset: 50% 3px auto 3px;
+    inset: 50% 2px auto 2px;
     height: 2px;
-    background: var(--tao-color-text-muted, #9ca3af);
+    background: var(--tao-color-text-muted);
     transform: rotate(-45deg);
 }
 
 .swatch.none.active {
-    border-color: var(--tao-color-text-strong, #fff);
-}
-
-.tools {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
-
-.tool {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--tao-color-text, #e5e7eb);
-    font-size: 15px;
-    cursor: pointer;
-}
-
-.tool:hover:not(:disabled) {
-    background: var(--tao-color-surface-hover, #374151);
-}
-
-.tool:disabled {
-    opacity: 0.35;
-    cursor: default;
-}
-
-.gap {
-    width: 6px;
-}
-
-.sep {
-    width: 1px;
-    height: 22px;
-    background: var(--tao-color-border-strong, #4b5563);
+    border-color: var(--tao-color-text-strong);
 }
 
 /* Палец крупнее курсора. */
 @media (pointer: coarse) {
-    .tool {
-        width: 40px;
-        height: 40px;
-        font-size: 17px;
-    }
-
     .swatch {
-        width: 34px;
-        height: 34px;
+        width: 32px;
+        height: 32px;
     }
 
     .swatches {

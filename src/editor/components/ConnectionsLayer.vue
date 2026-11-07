@@ -35,15 +35,6 @@ const preview = computed<LinkPreview | null>(() => {
 </script>
 
 <template>
-    <TaoxLinks class="connections" :lines="lines" :selected-id="editor.selectedConnection" :preview="preview" />
+    <TaoxLinks :lines="lines" :selected-id="editor.selectedConnection" :preview="preview" />
 </template>
 
-<style scoped>
-.connections {
-    --tx-link-color: var(--tao-color-text-muted, #9ca3af);
-    --tx-link-hover-color: var(--tao-color-text-strong, #fff);
-    --tx-link-selected-color: var(--tao-color-accent, #f59e0b);
-    --tx-link-preview-color: var(--tao-color-accent, #f59e0b);
-    --tx-link-invalid-color: var(--tao-color-danger, #ef4444);
-}
-</style>

@@ -1,10 +1,12 @@
 import { computed } from 'vue';
 import { createCommands, type Command, type Commands } from '@1337exp/taoux/commands';
 import { matchHotkey } from '@1337exp/taoux/hotkeys';
-import { useI18n } from '@/i18n';
+import { LOCALE_CODES, LOCALE_NAMES, setLocale, useI18n } from '@/i18n';
 import type { MessageKey } from '@/i18n';
 import type { AlignKind } from '@/core/align';
 import { openFromFile, saveToFile } from './file';
+import { ZOOM_STEP } from './state/view';
+import { SELECT_TOOL } from './state/tool';
 import { useEditor } from './store';
 
 type Editor = ReturnType<typeof useEditor>;
@@ -29,7 +31,7 @@ const shortcutsOf = (c: Command): string[] => (c.shortcut === undefined ? [] : t
  * Buttons, menus and hotkeys only show and call them, so they never drift apart.
  */
 export function createEditorCommands(editor: Editor) {
-    const { t, nodeTitle } = useI18n();
+    const { t, nodeTitle, locale } = useI18n();
 
     const link = () => editor.workspace.connections.find((c) => c.id === editor.selectedConnection);
     const nodeCount = () => editor.selection.size;
@@ -58,11 +60,38 @@ export function createEditorCommands(editor: Editor) {
         { id: 'align.distributeX', label: () => t('context.align.distributeX'), icon: 'distribute-x', enabled: () => nodeCount() > 2, run: () => editor.distributeSelected('x') },
         { id: 'align.distributeY', label: () => t('context.align.distributeY'), icon: 'distribute-y', enabled: () => nodeCount() > 2, run: () => editor.distributeSelected('y') },
 
-        // По команде на каждый тип ноды (кроме точек на связи): кнопки панели и пункты меню берутся отсюда же.
+        // Инструменты панели слева: «Выбор» и по инструменту на каждый тип ноды (кроме точек на связи).
+        { id: 'tool.select', label: () => t('tool.select'), icon: 'tool-select', shortcut: 'V', group: 'tool', checked: () => editor.tool === SELECT_TOOL, run: () => editor.setTool(SELECT_TOOL) },
         ...editor.registry
             .all()
             .filter((def) => !def.point)
-            .map((def): Command => ({ id: `node.add.${def.id}`, label: () => nodeTitle(def), icon: def.icon, run: () => editor.addNodeAtCenter(def.id) })),
+            .map(
+                (def): Command => ({
+                    id: `tool.place.${def.id}`,
+                    label: () => nodeTitle(def),
+                    icon: def.icon,
+                    shortcut: def.hotkey,
+                    group: 'tool',
+                    checked: () => editor.tool === def.id,
+                    // Повторное нажатие на включённый инструмент снимает его.
+                    run: () => editor.setTool(editor.tool === def.id ? SELECT_TOOL : def.id),
+                }),
+            ),
+        // Esc: снять инструмент, потом закрыть палитру, потом снять выделение.
+        { id: 'tool.cancel', label: () => t('tool.cancel'), shortcut: 'Escape', run: () => editor.cancelTool() },
+
+        { id: 'view.zoomIn', label: () => t('view.zoomIn'), icon: 'tao-plus', shortcut: ['=', 'plus'], run: () => editor.zoomBy(ZOOM_STEP) },
+        { id: 'view.zoomOut', label: () => t('view.zoomOut'), icon: 'tao-minus', shortcut: '-', run: () => editor.zoomBy(1 / ZOOM_STEP) },
+        { id: 'view.zoom100', label: () => t('view.zoom100'), shortcut: 'Shift+0', run: () => editor.zoomReset() },
+        { id: 'view.fit', label: () => t('view.fit'), icon: 'view-fit', shortcut: 'Shift+1', run: () => editor.fitAll() },
+
+        { id: 'touch.select', label: () => t('touch.select'), icon: 'touch-select', checked: () => editor.selectMode, run: () => (editor.selectMode = !editor.selectMode) },
+
+        { id: 'app.theme.dark', label: () => t('app.dark'), icon: 'tao-moon', group: 'theme', checked: () => editor.theme === 'dark', run: () => (editor.theme = 'dark') },
+        { id: 'app.theme.light', label: () => t('app.light'), icon: 'tao-sun', group: 'theme', checked: () => editor.theme === 'light', run: () => (editor.theme = 'light') },
+        ...LOCALE_CODES.map(
+            (code): Command => ({ id: `app.lang.${code}`, label: LOCALE_NAMES[code], group: 'lang', checked: () => locale.value === code, run: () => setLocale(code) }),
+        ),
     ];
 
     const commands = createCommands(list);
@@ -85,6 +114,8 @@ export interface EditorCommands {
     label(id: string): string;
     /** Имя иконки команды для `TaoIcon`. */
     icon(id: string): string | undefined;
+    /** Сочетание клавиш для этой платформы (`Ctrl+Z`, `⌘Z`) или undefined. */
+    shortcutLabel(id: string): string | undefined;
     /** Подпись + сочетание для подсказки: «Отменить (Ctrl+Z)». */
     hint(id: string): string;
     enabled(id: string): boolean;
@@ -111,6 +142,7 @@ export function useCommands(): EditorCommands {
             claimsKey,
             label: text,
             icon: (id) => commands.get(id)?.icon,
+            shortcutLabel: (id) => commands.shortcutLabel(id),
             hint: (id) => {
                 const key = commands.shortcutLabel(id);
                 return key ? `${text(id)} (${key})` : text(id);

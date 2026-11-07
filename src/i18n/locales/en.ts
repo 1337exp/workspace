@@ -48,6 +48,7 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
     },
 
     context: {
+        title: 'Actions on the selection',
         color: 'Color',
         noColor: 'No color',
         delete: 'Delete',
@@ -56,6 +57,7 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         straightenHint: 'Move a node so that the link becomes straight',
         align: {
             title: 'Alignment',
+            distribute: 'Distribute',
             left: 'Align left edges',
             hcenter: 'Align horizontal centers',
             right: 'Align right edges',
@@ -78,6 +80,41 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
     grid: {
         label: 'Grid',
         hint: 'Snap to grid. Hold Alt to disable temporarily',
+    },
+
+    tool: {
+        dock: 'Tools',
+        select: 'Select',
+        cancel: 'Cancel',
+        place: 'Place: {0}',
+    },
+
+    view: {
+        zoomIn: 'Zoom in',
+        zoomOut: 'Zoom out',
+        zoom100: 'Zoom to 100%',
+        fit: 'Zoom to fit',
+        zoomBar: 'Zoom',
+        options: 'View',
+    },
+
+    app: {
+        menu: 'Menu',
+        theme: 'Theme',
+        dark: 'Dark',
+        light: 'Light',
+        help: 'Help',
+    },
+
+    help: {
+        title: 'Controls',
+        hotkeys: 'Hotkeys',
+        pan: { label: 'Move the canvas', how: 'Right or middle mouse button, the wheel' },
+        zoom: { label: 'Zoom', how: 'Ctrl + wheel, pinch on a trackpad' },
+        marquee: { label: 'Select with a frame', how: 'Drag over an empty place' },
+        link: { label: 'Connect', how: 'Drag from a pin to another node' },
+        add: { label: 'Add a node', how: 'A tool on the left, or right click on an empty place' },
+        snap: { label: 'Without grid snapping', how: 'Hold Alt while dragging' },
     },
 
     touch: {

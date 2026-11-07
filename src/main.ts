@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import TaoUI from '@1337exp/taoui';
 import '@1337exp/taoui/styles.css';
+import '@1337exp/taoux/taoui.css'; // мост: --tx-* модулей TaoUX следуют теме TaoUI, светлой и тёмной
 import '@/assets/font/roboto.css';
 import '@/styles/app.css';
 import '@/styles/touch.css';

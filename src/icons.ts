@@ -8,6 +8,13 @@ import { registerTaoIcons } from '@1337exp/taoui';
  */
 export function registerAppIcons() {
     registerTaoIcons({
+        // приложение и панели
+        menu: { body: '<path d="M4 7h16M4 12h16M4 17h16"/>' },
+        help: { body: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/>' },
+        'tool-select': { body: '<path d="M5 3l14 7-6 2.2L10.8 19z"/>' },
+        'view-fit': { body: '<path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/>' },
+        'view-list': { body: '<path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01"/>' },
+
         // ноды
         'node-note': { body: '<path d="M5 4h14v10l-5 6H5z"/><path d="M14 20v-6h5"/>' },
         'node-image': { body: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>' },

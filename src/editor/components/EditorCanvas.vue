@@ -23,7 +23,7 @@ const plainNodes = computed(() => Object.values(editor.workspace.nodes).filter((
 </script>
 
 <template>
-    <TaoxCanvas class="canvas" :host="host" :options="workspaceCanvasOptions">
+    <TaoxCanvas :class="{ placing: editor.placing }" :host="host" :options="workspaceCanvasOptions">
         <NodeView v-for="node in containers" :key="node.id" :node="node" :selected="editor.selection.has(node.id)" />
         <ConnectionsLayer />
         <NodeView v-for="node in plainNodes" :key="node.id" :node="node" :selected="editor.selection.has(node.id)" />
@@ -31,9 +31,9 @@ const plainNodes = computed(() => Object.values(editor.workspace.nodes).filter((
 </template>
 
 <style scoped>
-.canvas {
-    --tx-canvas-bg: var(--tao-color-bg, #1b1d21);
-    --tx-canvas-accent: var(--tao-color-accent, #f59e0b);
-    --tx-canvas-accent-subtle: var(--tao-color-accent-subtle, rgba(245, 158, 11, 0.1));
+/* Инструмент «поставить» включён: везде, где нажатие поставит ноду, курсор-прицел. */
+.placing,
+.placing :deep(*) {
+    cursor: crosshair;
 }
 </style>

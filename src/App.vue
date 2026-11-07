@@ -4,7 +4,9 @@ import { useI18n } from '@/i18n';
 import EditorCanvas from '@/editor/components/EditorCanvas.vue';
 import NodePalette from '@/editor/components/NodePalette.vue';
 import ContextBar from '@/editor/components/ContextBar.vue';
-import ToolBar from '@/editor/components/ToolBar.vue';
+import AppMenu from '@/editor/components/AppMenu.vue';
+import ToolDock from '@/editor/components/ToolDock.vue';
+import ZoomBar from '@/editor/components/ZoomBar.vue';
 import { useCommands } from '@/editor/commands';
 import { useEditor } from '@/editor/store';
 
@@ -21,7 +23,9 @@ onBeforeUnmount(() => unbind?.());
 <template>
     <div class="app">
         <EditorCanvas />
-        <ToolBar />
+        <AppMenu />
+        <ToolDock />
+        <ZoomBar />
         <ContextBar />
         <NodePalette />
         <div v-if="editor.notice" class="notice" :class="editor.notice.kind">

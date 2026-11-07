@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { markRaw, ref } from 'vue';
 import { parse, serialize } from '@/core/serialize';
 import type { Workspace } from '@/core/types';
+import { nodesBounds } from '@/core/bounds';
 import { createWorkspace } from '@/core/workspace';
 import type { MessageKey } from '@/i18n';
 import { createDefaultRegistry } from '@/nodes';
@@ -14,6 +15,7 @@ import { useEdit } from './state/edit';
 import { usePlace } from './state/place';
 import { usePrefs } from './state/prefs';
 import { useSelection } from './state/selection';
+import { useTool } from './state/tool';
 import { useView } from './state/view';
 
 export type { PendingConnection } from './state/connect';
@@ -42,6 +44,8 @@ export const useEditor = defineStore('editor', () => {
     const edit = useEdit({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow });
     const link = useConnect({ workspace, registry, selection: sel, defaultArrow: prefs.defaultArrow });
     const place = usePlace({ workspace, registry, selection: sel, view, defaultArrow: prefs.defaultArrow });
+
+    const tool = useTool({ workspace, registry, selection: sel, place, snapEnabled: prefs.snapEnabled });
 
     /** Нода, у которой сейчас правится название (двойной клик по полосе). */
     const titleEditing = ref<string | null>(null);
@@ -94,6 +98,9 @@ export const useEditor = defineStore('editor', () => {
         // вид
         camera: view.camera,
         viewport: view.viewport,
+        zoomBy: view.zoomBy,
+        zoomReset: view.zoomReset,
+        fitAll: () => view.fitTo(nodesBounds(workspace.value)),
 
         // выделение
         selection: sel.selection,
@@ -104,6 +111,7 @@ export const useEditor = defineStore('editor', () => {
 
         // настройки
         snapEnabled: prefs.snapEnabled,
+        theme: prefs.theme,
         defaultArrow: prefs.defaultArrow,
         selectMode: prefs.selectMode,
 
@@ -149,6 +157,13 @@ export const useEditor = defineStore('editor', () => {
         updateConnect: link.updateConnect,
         cancelConnect: link.cancelConnect,
         finishConnect: recorded(link.finishConnect),
+
+        // инструмент панели слева
+        tool: tool.tool,
+        placing: tool.placing,
+        setTool: tool.setTool,
+        cancelTool: tool.cancel,
+        placeAt: recorded(tool.placeAt),
 
         // новые ноды и палитра
         palette: place.palette,

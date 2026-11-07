@@ -10,6 +10,12 @@ export function workspaceCanvasHost(editor: Editor, claimsKey: (event: KeyboardE
         // Сочетания команд (Delete, Ctrl+Z, ...) обрабатывает реестр команд, холст их не трогает.
         claimsKey,
 
+        // Инструмент «поставить» из панели слева: следующее нажатие по холсту ставит ноду.
+        get placing() {
+            return editor.placing;
+        },
+        placeAt: (_screen, world) => void editor.placeAt(world),
+
         get camera() {
             return editor.camera;
         },

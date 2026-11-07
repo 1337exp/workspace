@@ -23,6 +23,8 @@ export interface NodeDef<D extends NodeData = NodeData> {
     component: Component;
     /** Имя иконки для `TaoIcon` (встроенная `tao-*` или из `src/icons.ts`), например `node-note`. */
     icon?: string;
+    /** Клавиша инструмента в панели слева (`N`). Не задана — без клавиши. */
+    hotkey?: string;
     /** Поле `data` с названием ноды: оно показывается в полосе вместо названия типа и правится двойным кликом по полосе. */
     titleKey?: string;
     /**
