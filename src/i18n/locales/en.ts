@@ -29,8 +29,8 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
     },
 
     history: {
-        undo: 'Undo (Ctrl+Z)',
-        redo: 'Redo (Ctrl+Y)',
+        undo: 'Undo',
+        redo: 'Redo',
     },
 
     link: {

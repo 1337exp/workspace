@@ -5,8 +5,11 @@ import type { useEditor } from './store';
 type Editor = ReturnType<typeof useEditor>;
 
 /** Мост между общим холстом (taoux/canvas) и стором пространства: холст разбирает жесты, стор решает, что они значат. */
-export function workspaceCanvasHost(editor: Editor): CanvasHost<Anchor> {
+export function workspaceCanvasHost(editor: Editor, claimsKey: (event: KeyboardEvent) => boolean): CanvasHost<Anchor> {
     return {
+        // Сочетания команд (Delete, Ctrl+Z, ...) обрабатывает реестр команд, холст их не трогает.
+        claimsKey,
+
         get camera() {
             return editor.camera;
         },

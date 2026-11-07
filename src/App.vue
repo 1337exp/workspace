@@ -1,13 +1,21 @@
 <script lang="ts" setup>
+import { onBeforeUnmount, onMounted } from 'vue';
 import { useI18n } from '@/i18n';
 import EditorCanvas from '@/editor/components/EditorCanvas.vue';
 import NodePalette from '@/editor/components/NodePalette.vue';
 import ContextBar from '@/editor/components/ContextBar.vue';
 import ToolBar from '@/editor/components/ToolBar.vue';
+import { useCommands } from '@/editor/commands';
 import { useEditor } from '@/editor/store';
 
 const editor = useEditor();
 const { t } = useI18n();
+
+// Горячие клавиши всех команд на всём окне. / The shortcuts of every command, on the whole window.
+const { commands } = useCommands();
+let unbind: (() => void) | null = null;
+onMounted(() => (unbind = commands.bind(window)));
+onBeforeUnmount(() => unbind?.());
 </script>
 
 <template>

@@ -26,8 +26,8 @@ export default {
     },
 
     history: {
-        undo: 'Отменить (Ctrl+Z)',
-        redo: 'Повторить (Ctrl+Y)',
+        undo: 'Отменить',
+        redo: 'Повторить',
     },
 
     link: {

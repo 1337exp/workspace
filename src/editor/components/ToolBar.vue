@@ -1,77 +1,62 @@
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
 import { TaoButton, TaoSegmented, TaoSegmentedOption } from '@1337exp/taoui';
-import type { Arrow } from '@/core/types';
 import { LOCALE_CODES, LOCALE_NAMES, isLocaleCode, setLocale, useI18n } from '@/i18n';
-import { downloadText, MAX_FILE_BYTES } from '@1337exp/taoux/file';
-import { FILE_NAME } from '../file';
 import { coarse } from '@1337exp/taoux/touch';
+import { useCommands } from '../commands';
 import { useEditor } from '../store';
 
 const editor = useEditor();
-const { t, nodeTitle, locale } = useI18n();
+const cmd = useCommands();
+const { t, locale } = useI18n();
 
-const fileInput = ref<HTMLInputElement | null>(null);
-
-const selectedLink = computed(() => editor.workspace.connections.find((c) => c.id === editor.selectedConnection));
-/** Показываем вид выбранной связи, а без выбора — вид новых связей. */
-const arrow = computed<Arrow>(() => selectedLink.value?.arrow ?? editor.defaultArrow);
+/** Выбранный вид связи (радио-команды `link.*`): без выбора это вид новых связей. */
+const arrow = () => (cmd.checked('link.arrow') ? 'end' : 'none');
 
 function setArrow(value: unknown) {
-    if (value === 'none' || value === 'end') editor.setArrowStyle(value);
+    if (value === 'none') cmd.run('link.line');
+    else if (value === 'end') cmd.run('link.arrow');
 }
 
 function setLang(value: unknown) {
     if (isLocaleCode(value)) setLocale(value);
 }
-
-function save() {
-    editor.flushSave();
-    downloadText(FILE_NAME, editor.exportText());
-}
-
-async function onFile(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = ''; // тот же файл можно будет выбрать ещё раз
-    if (!file) return;
-
-    if (file.size > MAX_FILE_BYTES) {
-        editor.showNotice('error', 'file.error.tooLarge');
-        return;
-    }
-    editor.importText(await file.text());
-}
 </script>
 
 <template>
     <div class="toolbar" @pointerdown.stop @wheel.stop>
-        <TaoButton variant="secondary" size="small" @click="editor.newWorkspace()"><i class="icon-plus" />{{ t('file.new') }}</TaoButton>
-        <TaoButton variant="secondary" size="small" @click="fileInput?.click()"><i class="icon-docs" />{{ t('file.open') }}</TaoButton>
-        <TaoButton variant="secondary" size="small" @click="save"><i class="icon-download" />{{ t('file.save') }}</TaoButton>
-        <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="onFile" />
+        <TaoButton variant="secondary" size="small" @click="cmd.run('file.new')"><i class="icon-plus" />{{ cmd.label('file.new') }}</TaoButton>
+        <TaoButton variant="secondary" size="small" :title="cmd.hint('file.open')" @click="cmd.run('file.open')"><i class="icon-docs" />{{ cmd.label('file.open') }}</TaoButton>
+        <TaoButton variant="secondary" size="small" :title="cmd.hint('file.save')" @click="cmd.run('file.save')"><i class="icon-download" />{{ cmd.label('file.save') }}</TaoButton>
 
         <span class="sep" />
 
-        <TaoButton variant="secondary" size="small" :disabled="!editor.canUndo" :title="t('history.undo')" @click="editor.undo()">↶</TaoButton>
-        <TaoButton variant="secondary" size="small" :disabled="!editor.canRedo" :title="t('history.redo')" @click="editor.redo()">↷</TaoButton>
-        <TaoButton :variant="editor.snapEnabled ? 'primary' : 'secondary'" size="small" :title="t('grid.hint')" @click="editor.snapEnabled = !editor.snapEnabled">
-            <i class="icon-menu" />{{ t('grid.label') }}
+        <TaoButton variant="secondary" size="small" :disabled="!cmd.enabled('edit.undo')" :title="cmd.hint('edit.undo')" @click="cmd.run('edit.undo')">↶</TaoButton>
+        <TaoButton variant="secondary" size="small" :disabled="!cmd.enabled('edit.redo')" :title="cmd.hint('edit.redo')" @click="cmd.run('edit.redo')">↷</TaoButton>
+        <TaoButton :variant="cmd.checked('view.grid') ? 'primary' : 'secondary'" size="small" :title="t('grid.hint')" @click="cmd.run('view.grid')">
+            <i class="icon-menu" />{{ cmd.label('view.grid') }}
         </TaoButton>
 
         <span class="sep" />
 
-        <TaoButton v-for="def in editor.registry.all().filter((d) => !d.point)" :key="def.id" variant="secondary" size="small" @click="editor.addNodeAtCenter(def.id)">
-            <i v-if="def.icon" :class="def.icon" />{{ nodeTitle(def) }}
+        <TaoButton
+            v-for="def in editor.registry.all().filter((d) => !d.point)"
+            :key="def.id"
+            variant="secondary"
+            size="small"
+            @click="cmd.run('node.add.' + def.id)"
+        >
+            <i v-if="def.icon" :class="def.icon" />{{ cmd.label('node.add.' + def.id) }}
         </TaoButton>
 
         <span class="sep" />
 
-        <TaoSegmented :model-value="arrow" size="small" @update:model-value="setArrow">
-            <TaoSegmentedOption value="none">{{ t('link.line') }}</TaoSegmentedOption>
-            <TaoSegmentedOption value="end">{{ t('link.arrow') }} →</TaoSegmentedOption>
+        <TaoSegmented :model-value="arrow()" size="small" @update:model-value="setArrow">
+            <TaoSegmentedOption value="none">{{ cmd.label('link.line') }}</TaoSegmentedOption>
+            <TaoSegmentedOption value="end">{{ cmd.label('link.arrow') }} →</TaoSegmentedOption>
         </TaoSegmented>
-        <TaoButton variant="secondary" size="small" :disabled="!selectedLink" @click="editor.reverseSelected()"><i class="icon-shuffle" />{{ t('link.reverse') }}</TaoButton>
+        <TaoButton variant="secondary" size="small" :disabled="!cmd.enabled('link.reverse')" @click="cmd.run('link.reverse')">
+            <i class="icon-shuffle" />{{ cmd.label('link.reverse') }}
+        </TaoButton>
 
         <template v-if="coarse">
             <span class="sep" />

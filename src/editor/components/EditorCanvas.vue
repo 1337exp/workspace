@@ -3,12 +3,14 @@ import { computed } from 'vue';
 import { TaoxCanvas } from '@1337exp/taoux/canvas';
 import '@1337exp/taoux/canvas.css';
 import { workspaceCanvasHost, workspaceCanvasOptions } from '../canvasHost';
+import { useCommands } from '../commands';
 import { useEditor } from '../store';
 import ConnectionsLayer from './ConnectionsLayer.vue';
 import NodeView from './NodeView.vue';
 
 const editor = useEditor();
-const host = workspaceCanvasHost(editor);
+const { claimsKey } = useCommands();
+const host = workspaceCanvasHost(editor, claimsKey);
 
 // Контейнеры (группы) лежат под связями и остальными нодами; крупные ниже мелких, чтобы вложенные были сверху.
 const isContainer = (type: string) => !!editor.registry.find(type)?.container;

@@ -4,6 +4,7 @@ import { TaoButton, TaoSegmented, TaoSegmentedOption } from '@1337exp/taoui';
 import { NODE_COLORS, type NodeColor } from '@/core/colors';
 import type { Arrow } from '@/core/types';
 import { useI18n } from '@/i18n';
+import { useCommands } from '../commands';
 import { useEditor } from '../store';
 import DistributeIcon from './DistributeIcon.vue';
 import { coarse } from '@1337exp/taoux/touch';
@@ -14,6 +15,7 @@ import { coarse } from '@1337exp/taoux/touch';
  * выделена хотя бы нода или связь.
  */
 const editor = useEditor();
+const cmd = useCommands();
 const { t } = useI18n();
 
 const link = computed(() => editor.workspace.connections.find((c) => c.id === editor.selectedConnection) ?? null);
@@ -57,7 +59,8 @@ const ALIGN = [
 ] as const;
 
 function setArrow(value: unknown) {
-    if (value === 'none' || value === 'end') editor.setArrowStyle(value);
+    if (value === 'none') cmd.run('link.line');
+    else if (value === 'end') cmd.run('link.arrow');
 }
 </script>
 
@@ -94,15 +97,15 @@ function setArrow(value: unknown) {
                 class="tool"
                 :title="t(`context.align.${a.kind}`)"
                 :aria-label="t(`context.align.${a.kind}`)"
-                @click="editor.alignSelected(a.kind)"
+                @click="cmd.run('align.' + a.kind)"
             >
                 <i :class="[a.icon, { rot: a.rot }]" />
             </button>
             <span class="gap" />
-            <button class="tool" :disabled="nodeCount < 3" :title="t('context.align.distributeX')" :aria-label="t('context.align.distributeX')" @click="editor.distributeSelected('x')">
+            <button class="tool" :disabled="!cmd.enabled('align.distributeX')" :title="cmd.label('align.distributeX')" :aria-label="cmd.label('align.distributeX')" @click="cmd.run('align.distributeX')">
                 <DistributeIcon axis="x" />
             </button>
-            <button class="tool" :disabled="nodeCount < 3" :title="t('context.align.distributeY')" :aria-label="t('context.align.distributeY')" @click="editor.distributeSelected('y')">
+            <button class="tool" :disabled="!cmd.enabled('align.distributeY')" :title="cmd.label('align.distributeY')" :aria-label="cmd.label('align.distributeY')" @click="cmd.run('align.distributeY')">
                 <DistributeIcon axis="y" />
             </button>
         </div>
@@ -112,17 +115,17 @@ function setArrow(value: unknown) {
                 <TaoSegmentedOption value="none">{{ t('link.line') }}</TaoSegmentedOption>
                 <TaoSegmentedOption value="end">{{ t('link.arrow') }} →</TaoSegmentedOption>
             </TaoSegmented>
-            <TaoButton variant="secondary" size="small" @click="editor.reverseSelected()">
+            <TaoButton variant="secondary" size="small" @click="cmd.run('link.reverse')">
                 <i class="icon-shuffle" />{{ t('link.reverse') }}
             </TaoButton>
-            <TaoButton variant="secondary" size="small" :title="t('context.straightenHint')" @click="editor.straightenSelectedLink()">
+            <TaoButton variant="secondary" size="small" :title="t('context.straightenHint')" @click="cmd.run('link.straighten')">
                 <i class="icon-minus" />{{ t('context.straighten') }}
             </TaoButton>
         </template>
 
         <span v-if="canColor || link || nodeCount > 1" class="sep" />
 
-        <TaoButton variant="secondary" tone="danger" size="small" @click="editor.removeSelected()">
+        <TaoButton variant="secondary" tone="danger" size="small" :title="cmd.hint('edit.delete')" @click="cmd.run('edit.delete')">
             <i class="icon-trash-1" />{{ t('context.delete') }}
         </TaoButton>
     </div>
