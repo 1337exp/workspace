@@ -3,21 +3,45 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import { TaoButton, TaoCheckbox, TaoIcon } from '@1337exp/taoui';
 import { sortableTextsEn, sortableTextsRu, useSortable } from '@1337exp/taoux/sortable';
 import { useI18n } from '@/i18n';
-import { emptyItem, insertItem, pasteLines, progress, removeItem, reorder, type ChecklistData, type ChecklistItem } from './items';
+import {
+    depthOf,
+    emptyItem,
+    indent,
+    insertItem,
+    isPartial,
+    normalize,
+    outdent,
+    pasteLines,
+    progress,
+    removeItem,
+    reorder,
+    setDone,
+    type ChecklistData,
+    type ChecklistItem,
+} from './items';
 
 /**
- * Чеклист: пункты с галочкой и текстом. Enter добавляет пункт ниже, Backspace в пустом убирает его, стрелки ходят по
- * пунктам, вставка многострочного текста раскладывается по пунктам. «Скрыть выполненные» включается в панели над нодой.
- * A checklist: items with a tick and text. Enter adds an item below, Backspace in an empty one removes it, arrows walk
- * the items, pasting multi-line text spreads it over items. "Hide completed" is switched on in the bar over the node.
+ * Чеклист: пункты с галочкой и текстом, вложенные до трёх уровней. Enter добавляет пункт ниже (у родителя первым
+ * подпунктом), Tab вкладывает пункт в предыдущий, Shift+Tab выносит; Backspace и Enter в пустом вложенном сначала выносят,
+ * в пустом верхнем Backspace убирает; стрелки ходят по пунктам, вставка многострочного текста раскладывается по пунктам
+ * (отступы дают вложенность). Отметка родителя это отметка всех его подпунктов. «Скрыть выполненные» включается в панели
+ * над нодой.
+ * A checklist: items with a tick and text, nested up to three levels. Enter adds an item below (the first subitem of a
+ * parent), Tab nests an item into the previous one, Shift+Tab lifts it; Backspace and Enter in an empty nested one lift
+ * it first, Backspace in an empty top-level one removes it; arrows walk the items, pasting multi-line text spreads it
+ * over items (indentation gives nesting). The tick of a parent is the tick of all its subitems. "Hide completed" is
+ * switched on in the bar over the node.
  */
 const props = defineProps<{ data: ChecklistData; selected: boolean }>();
 const emit = defineEmits<{ change: [patch: Partial<ChecklistData>] }>();
 
 const { t, locale } = useI18n();
 
-const items = computed<ChecklistItem[]>(() => (props.data.items?.length ? props.data.items : [emptyItem([])]));
-const shown = computed(() => (props.data.hideDone ? items.value.filter((i) => !i.done) : items.value));
+// Нормализуем при чтении: данные могли быть написаны вручную или старой версией (без вложенности).
+const items = computed<ChecklistItem[]>(() => normalize(props.data.items?.length ? props.data.items : [emptyItem([])]));
+/** Видимые строки с номером в полном списке (нужен, чтобы знать, есть ли у строки подпункты). */
+const rows = computed(() => items.value.map((item, index) => ({ item, index })).filter((r) => !props.data.hideDone || !r.item.done));
+const shown = computed(() => rows.value.map((r) => r.item));
 const stat = computed(() => progress(items.value));
 
 const inputs = new Map<string, HTMLInputElement>();
@@ -55,8 +79,33 @@ function setText(id: string, text: string) {
     commit(items.value.map((i) => (i.id === id ? { ...i, text } : i)));
 }
 
-function setDone(id: string, done: boolean) {
-    commit(items.value.map((i) => (i.id === id ? { ...i, done } : i)));
+const toggle = (id: string, done: boolean) => commit(setDone(items.value, id, done));
+
+/** Вложить (`in`) или вынести (`out`) пункт с подпунктами. Возвращает, получилось ли. */
+function nest(item: ChecklistItem, dir: 'in' | 'out'): boolean {
+    const next = dir === 'in' ? indent(items.value, item.id) : outdent(items.value, item.id);
+    if (!next) return false;
+    commit(next);
+    void focusItem(item.id);
+    return true;
+}
+
+/** Tab вкладывает, Shift+Tab выносит; если нельзя, клавиша делает своё обычное (уводит фокус). */
+function onTab(e: KeyboardEvent, item: ChecklistItem) {
+    if (nest(item, e.shiftKey ? 'out' : 'in')) e.preventDefault();
+}
+
+/** Enter: в пустом вложенном пункте выносит его на уровень, иначе добавляет пункт. */
+function onEnter(item: ChecklistItem) {
+    if (item.text === '' && depthOf(item) > 0) {
+        const next = outdent(items.value, item.id);
+        if (next) {
+            commit(next);
+            void focusItem(item.id);
+            return;
+        }
+    }
+    addAfter(item.id);
 }
 
 function addAfter(id: string | null) {
@@ -74,6 +123,15 @@ function neighbour(id: string, step: -1 | 1) {
 function onBackspace(e: KeyboardEvent, item: ChecklistItem) {
     if (item.text !== '') return;
     e.preventDefault();
+    // В пустом вложенном пункте Backspace сначала выносит его, как во всех списках дел.
+    if (depthOf(item) > 0) {
+        const lifted = outdent(items.value, item.id);
+        if (lifted) {
+            commit(lifted);
+            void focusItem(item.id);
+            return;
+        }
+    }
     const prev = neighbour(item.id, -1) ?? neighbour(item.id, 1);
     commit(removeItem(items.value, item.id));
     if (prev) void focusItem(prev.id);
@@ -98,11 +156,16 @@ function onPaste(e: ClipboardEvent, item: ChecklistItem) {
 <template>
     <div class="checklist">
         <ul ref="list" class="items">
-            <li v-for="item in shown" :key="item.id" class="item" data-sortable-item>
+            <li v-for="{ item, index } in rows" :key="item.id" class="item" :style="{ paddingLeft: `${depthOf(item) * 22}px` }" data-sortable-item>
                 <button class="grip" type="button" data-sortable-handle :aria-label="t('nodes.checklist.move')" :title="t('nodes.checklist.move')">
                     <TaoIcon name="tao-grip" />
                 </button>
-                <TaoCheckbox :model-value="item.done" :aria-label="item.text || t('nodes.checklist.item')" @update:model-value="setDone(item.id, $event)" />
+                <TaoCheckbox
+                    :model-value="item.done"
+                    :indeterminate="isPartial(items, index)"
+                    :aria-label="item.text || t('nodes.checklist.item')"
+                    @update:model-value="toggle(item.id, $event)"
+                />
                 <input
                     :ref="(el) => setInput(item.id, el)"
                     class="text"
@@ -111,12 +174,22 @@ function onPaste(e: ClipboardEvent, item: ChecklistItem) {
                     :placeholder="t('nodes.checklist.item')"
                     spellcheck="false"
                     @input="setText(item.id, ($event.target as HTMLInputElement).value)"
-                    @keydown.enter.prevent="addAfter(item.id)"
+                    @keydown.enter.prevent="onEnter(item)"
+                    @keydown.tab="onTab($event, item)"
                     @keydown.backspace="onBackspace($event, item)"
                     @keydown.up="onArrow($event, item, -1)"
                     @keydown.down="onArrow($event, item, 1)"
                     @paste="onPaste($event, item)"
                 />
+                <!-- Пальцем Tab нет: две кнопки у пункта в фокусе. pointerdown.prevent оставляет фокус в поле, клавиатура не прячется. -->
+                <span class="nest">
+                    <button type="button" tabindex="-1" :aria-label="t('nodes.checklist.outdent')" @pointerdown.prevent @click="nest(item, 'out')">
+                        <TaoIcon name="tao-chevron-left" />
+                    </button>
+                    <button type="button" tabindex="-1" :aria-label="t('nodes.checklist.indent')" @pointerdown.prevent @click="nest(item, 'in')">
+                        <TaoIcon name="tao-chevron-right" />
+                    </button>
+                </span>
             </li>
         </ul>
 
@@ -196,6 +269,32 @@ function onPaste(e: ClipboardEvent, item: ChecklistItem) {
     border-radius: var(--tao-radius-control);
     background: var(--tao-color-surface-hover);
     box-shadow: var(--tao-shadow-panel);
+}
+
+/* Кнопки «вложить» и «вынести» нужны только пальцу и только у пункта, в котором стоит курсор. */
+.nest {
+    display: none;
+    flex: none;
+    gap: 2px;
+}
+
+.nest button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--tao-radius-control);
+    background: var(--tao-color-surface-hover);
+    color: var(--tao-color-text);
+}
+
+@media (pointer: coarse) {
+    .item:focus-within .nest {
+        display: flex;
+    }
 }
 
 .text {

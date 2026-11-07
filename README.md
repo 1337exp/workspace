@@ -28,7 +28,7 @@ npm run screenshot  # docs/media/*.png for the README, needs Chrome or Edge
 |---|---|---|
 | Note | `N` | a frame with a strip and text |
 | Text | `T` | text right on the canvas, no frame; click and type at once; a double click edits; the height follows the content, an emptied text disappears; the colour from the bar tints the letters |
-| Checklist | `L` | items with a tick: `Enter` adds an item below, `Backspace` in an empty one removes it, `↑` `↓` walk the items, an item is dragged by the handle on the left (and from the keyboard: on the handle `Space` lifts, arrows move, `Space` drops, `Esc` cancels), pasting multi-line text spreads it over items; a counter and a progress line at the bottom; "Hide completed" in the bar over the node |
+| Checklist | `L` | items with a tick: `Enter` adds an item below, `Backspace` in an empty one removes it, `Tab` nests an item under the previous one (up to three levels), `Shift+Tab` lifts it, `Backspace` and `Enter` in an empty nested one lift it too (with a finger, two buttons at the right of the focused item); on a parent `Enter` gives the first subitem; the tick of a parent is the tick of all its subitems (a dash when some are done), the counter counts the items without subitems; `↑` `↓` walk the items, an item is dragged with its subitems by the handle on the left (and from the keyboard: on the handle `Space` lifts, arrows move, `Space` drops, `Esc` cancels), pasting multi-line text spreads it over items (indentation gives nesting, `-`, `*`, `•` and `[ ]` / `[x]` are understood); a counter and a progress line at the bottom; "Hide completed" in the bar over the node |
 | Link | `K` | a card: the host big, the address small, a button opens it in a new tab; `example.com` becomes `https://example.com`; only `http` and `https` open; we do not fetch the page (no title, no icon), so that addresses are not sent to third-party services |
 | Image | `I` | an image by its link |
 | Group | `G` | a frame under the rest: nodes wholly inside it travel with it when you drag it by its strip |
@@ -130,7 +130,7 @@ Look: the Roboto font in `src/assets/font`, our own colours from the `--tao-colo
 
 ## Not yet
 
-Smart guides while dragging, nested checklist items, drawing, stickers and comments. Copying images and files, pasting images from the clipboard. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
+Smart guides while dragging, drawing, stickers and comments. Copying images and files, pasting images from the clipboard. Touch control has been checked only in emulation, not on a real tablet. More: [PLAN.md](PLAN.md) (in Russian).
 
 ## License
 
