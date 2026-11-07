@@ -14,6 +14,8 @@ import {
     reorder,
     setDone,
     subtreeEnd,
+    toggleCollapsed,
+    visibleIndexes,
     type ChecklistItem,
 } from '@/nodes/checklist/items';
 import { useEditor } from '@/editor/store';
@@ -206,5 +208,50 @@ describe('в ноде', () => {
         const items = editor.workspace.nodes[n.id]!.data.items as ChecklistItem[];
         expect(items[1]!.depth).toBe(1);
         expect(show(normalize(items))).toBe('x0! y1!'); // родитель выведен из подпункта
+    });
+});
+
+describe('сворачивание', () => {
+    const base = () => normalize(list('a b1 c2 d e1'));
+
+    it('сворачивается только родитель; у пункта без подпунктов флаг не держится', () => {
+        const t = toggleCollapsed(base(), 'a');
+        expect(t[0]!.collapsed).toBe(true);
+        expect(toggleCollapsed(base(), 'd')[3]!.collapsed).toBe(true); // d родитель e
+        expect(toggleCollapsed(base(), 'c')[2]!.collapsed).toBeUndefined(); // у c подпунктов нет
+        expect(toggleCollapsed(t, 'a')[0]!.collapsed).toBeUndefined(); // повторно: развернуть
+        // подпункт удалён: флаг уходит
+        const single = normalize([{ id: 'x', text: '', done: false, collapsed: true }]);
+        expect('collapsed' in single[0]!).toBe(false);
+    });
+
+    it('видны строки вне свёрнутых поддеревьев, на любой глубине', () => {
+        expect(visibleIndexes(base())).toEqual([0, 1, 2, 3, 4]);
+        expect(visibleIndexes(toggleCollapsed(base(), 'a'))).toEqual([0, 3, 4]);
+        expect(visibleIndexes(toggleCollapsed(base(), 'b'))).toEqual([0, 1, 3, 4]);
+    });
+
+    it('счёт свёрнутых подпунктов не теряется', () => {
+        const t = toggleCollapsed(setDone(base(), 'c', true), 'a');
+        expect(progress(t)).toEqual({ done: 1, total: 2 }); // листья: c и e (у b и d есть подпункты)
+    });
+
+    it('Enter у свёрнутого родителя ставит пункт после скрытых подпунктов на его глубине; у развёрнутого первым подпунктом', () => {
+        const folded = toggleCollapsed(base(), 'a');
+        const r = insertItem(folded, 'a');
+        expect(show(r.items).replace(r.item.id, 'N')).toBe('a0 b1 c2 N0 d0 e1');
+        const open = insertItem(base(), 'a');
+        expect(show(open.items).replace(open.item.id, 'N')).toBe('a0 N1 b1 c2 d0 e1');
+    });
+
+    it('вложить пункт под свёрнутый родитель разворачивает его; перетаскивание свёрнутого едет вместе со скрытыми', () => {
+        const t = toggleCollapsed(normalize(list('a b1 c')), 'a');
+        const nested = indent(t, 'c')!;
+        expect(nested[0]!.collapsed).toBeUndefined();
+        expect(show(nested)).toBe('a0 b1 c1');
+
+        const f = toggleCollapsed(base(), 'a');
+        const shown = visibleIndexes(f).map((i) => f[i]!); // a d e
+        expect(show(reorder(f, shown, 0, 1))).toBe('d0 e1 a0 b1 c2'); // a со скрытыми b, c после d с его поддеревом
     });
 });

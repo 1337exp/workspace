@@ -11,6 +11,8 @@ export interface ChecklistItem {
     text: string;
     done: boolean;
     depth?: number;
+    /** Подпункты свёрнуты (скрыты, но на месте и в счёте). Имеет смысл только у пункта с подпунктами. */
+    collapsed?: boolean;
 }
 
 // type, а не interface: у данных ноды должна быть индексная подпись (`NodeData`).
@@ -60,6 +62,14 @@ export function normalize(items: readonly ChecklistItem[]): ChecklistItem[] {
         return depth === depthOf(item) && (depth > 0 || item.depth === undefined) ? item : withDepth(item, depth);
     });
 
+    // Свёрнутость нужна только родителям: у пункта без подпунктов её убираем.
+    for (let i = 0; i < out.length; i++) {
+        if (out[i]!.collapsed && !hasChildren(out, i)) {
+            const { collapsed: _c, ...rest } = out[i]!;
+            out[i] = rest;
+        }
+    }
+
     // С конца: к моменту, когда дошли до родителя, его подпункты уже окончательные.
     for (let i = out.length - 1; i >= 0; i--) {
         const d = depthOf(out[i]!);
@@ -74,7 +84,29 @@ export function normalize(items: readonly ChecklistItem[]): ChecklistItem[] {
 }
 
 /** Есть ли у пункта подпункты. / Does the item have subitems. */
-export const hasChildren = (items: readonly ChecklistItem[], index: number) => index + 1 < items.length && depthOf(items[index + 1]!) > depthOf(items[index]!);
+export function hasChildren (items: readonly ChecklistItem[], index: number): boolean {
+    return index + 1 < items.length && depthOf(items[index + 1]!) > depthOf(items[index]!);
+}
+
+/** Индексы строк, которые видны: подпункты свёрнутого родителя скрыты (на любой глубине). */
+export function visibleIndexes(items: readonly ChecklistItem[]): number[] {
+    const out: number[] = [];
+    for (let i = 0; i < items.length; i++) {
+        out.push(i);
+        if (items[i]!.collapsed) i = subtreeEnd(items, i) - 1;
+    }
+    return out;
+}
+
+/** Свернуть или развернуть подпункты. */
+export function toggleCollapsed(items: readonly ChecklistItem[], id: string): ChecklistItem[] {
+    return normalize(items.map((i, k) => (i.id === id && hasChildren(items, k) ? (i.collapsed ? withoutCollapsed(i) : { ...i, collapsed: true }) : i)));
+}
+
+function withoutCollapsed(item: ChecklistItem): ChecklistItem {
+    const { collapsed: _c, ...rest } = item;
+    return rest;
+}
 
 /** Не выполнен, но что-то из подпунктов выполнено: галочка «не до конца». */
 export function isPartial(items: readonly ChecklistItem[], index: number): boolean {
@@ -91,8 +123,10 @@ export function isPartial(items: readonly ChecklistItem[], index: number): boole
  */
 export function insertItem(items: readonly ChecklistItem[], afterId: string | null, text = ''): { items: ChecklistItem[]; item: ChecklistItem } {
     const found = afterId === null ? -1 : items.findIndex((i) => i.id === afterId);
-    const at = found < 0 ? items.length : found + 1;
-    const depth = found < 0 ? 0 : depthOf(items[found]!) + (hasChildren(items, found) ? 1 : 0);
+    // У развёрнутого родителя новый пункт становится первым подпунктом; у свёрнутого (подпункты не видны) встаёт после них.
+    const folded = found >= 0 && !!items[found]!.collapsed && hasChildren(items, found);
+    const at = found < 0 ? items.length : folded ? subtreeEnd(items, found) : found + 1;
+    const depth = found < 0 ? 0 : depthOf(items[found]!) + (hasChildren(items, found) && !folded ? 1 : 0);
     const item = withDepth({ ...emptyItem(items), text }, depth);
     const next = [...items];
     next.splice(at, 0, item);
@@ -111,6 +145,15 @@ function shift(items: readonly ChecklistItem[], id: string, delta: 1 | -1): Chec
 
     const next = [...items];
     for (let k = i; k < end; k++) next[k] = withDepth(items[k]!, depthOf(items[k]!) + delta);
+    // Вложенный пункт не должен исчезнуть: вся цепочка его новых родителей разворачивается.
+    if (delta > 0) {
+        let want = depthOf(next[i]!) - 1;
+        for (let k = i - 1; k >= 0 && want >= 0; k--) {
+            if (depthOf(next[k]!) !== want) continue;
+            if (next[k]!.collapsed) next[k] = withoutCollapsed(next[k]!);
+            want--;
+        }
+    }
     return normalize(next);
 }
 

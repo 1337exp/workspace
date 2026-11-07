@@ -16,6 +16,9 @@ import {
     removeItem,
     reorder,
     setDone,
+    toggleCollapsed,
+    visibleIndexes,
+    hasChildren,
     type ChecklistData,
     type ChecklistItem,
 } from './items';
@@ -40,7 +43,11 @@ const { t, locale } = useI18n();
 // Нормализуем при чтении: данные могли быть написаны вручную или старой версией (без вложенности).
 const items = computed<ChecklistItem[]>(() => normalize(props.data.items?.length ? props.data.items : [emptyItem([])]));
 /** Видимые строки с номером в полном списке (нужен, чтобы знать, есть ли у строки подпункты). */
-const rows = computed(() => items.value.map((item, index) => ({ item, index })).filter((r) => !props.data.hideDone || !r.item.done));
+const rows = computed(() =>
+    visibleIndexes(items.value)
+        .map((index) => ({ item: items.value[index]!, index }))
+        .filter((r) => !props.data.hideDone || !r.item.done),
+);
 const shown = computed(() => rows.value.map((r) => r.item));
 const stat = computed(() => progress(items.value));
 
@@ -160,6 +167,18 @@ function onPaste(e: ClipboardEvent, item: ChecklistItem) {
                 <button class="grip" type="button" data-sortable-handle :aria-label="t('nodes.checklist.move')" :title="t('nodes.checklist.move')">
                     <TaoIcon name="tao-grip" />
                 </button>
+                <button
+                    v-if="hasChildren(items, index)"
+                    class="fold"
+                    type="button"
+                    :aria-expanded="!item.collapsed"
+                    :aria-label="item.collapsed ? t('nodes.checklist.expand') : t('nodes.checklist.collapse')"
+                    :title="item.collapsed ? t('nodes.checklist.expand') : t('nodes.checklist.collapse')"
+                    @click="commit(toggleCollapsed(items, item.id))"
+                >
+                    <TaoIcon :name="item.collapsed ? 'tao-chevron-right' : 'tao-chevron-down'" />
+                </button>
+                <span v-else class="fold" aria-hidden="true" />
                 <TaoCheckbox
                     :model-value="item.done"
                     :indeterminate="isPartial(items, index)"
@@ -269,6 +288,29 @@ function onPaste(e: ClipboardEvent, item: ChecklistItem) {
     border-radius: var(--tao-radius-control);
     background: var(--tao-color-surface-hover);
     box-shadow: var(--tao-shadow-panel);
+}
+
+/* Стрелка сворачивания: у пункта без подпунктов пустое место того же размера, чтобы галочки стояли ровно. */
+.fold {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--tao-radius-control);
+    background: transparent;
+    color: var(--tao-color-text-muted);
+}
+
+button.fold {
+    cursor: pointer;
+}
+
+button.fold:hover {
+    color: var(--tao-color-text);
 }
 
 /* Кнопки «вложить» и «вынести» нужны только пальцу и только у пункта, в котором стоит курсор. */
