@@ -1,12 +1,11 @@
 <script lang="ts" setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { TaoButton, TaoSegmented, TaoSegmentedOption } from '@1337exp/taoui';
+import { TaoButton, TaoIcon, TaoSegmented, TaoSegmentedOption } from '@1337exp/taoui';
 import { NODE_COLORS, type NodeColor } from '@/core/colors';
 import type { Arrow } from '@/core/types';
 import { useI18n } from '@/i18n';
-import { useCommands } from '../commands';
+import { ALIGN_COMMANDS, useCommands } from '../commands';
 import { useEditor } from '../store';
-import DistributeIcon from './DistributeIcon.vue';
 import { coarse } from '@1337exp/taoux/touch';
 
 /**
@@ -45,19 +44,6 @@ const visible = computed(() => hasSelection.value && !(coarse.value && typing.va
 
 const active = (color: NodeColor | null) => editor.selectionColor === color;
 
-/**
- * Выравнивание. Иконки по горизонтали это «прижатые линии» из fontello (align-left/center/right),
- * по вертикали те же иконки, повёрнутые на 90°: левый край становится верхним.
- */
-const ALIGN = [
-    { kind: 'left', icon: 'icon-align-left', rot: false },
-    { kind: 'hcenter', icon: 'icon-align-center', rot: false },
-    { kind: 'right', icon: 'icon-align-right', rot: false },
-    { kind: 'top', icon: 'icon-align-left', rot: true },
-    { kind: 'vmiddle', icon: 'icon-align-center', rot: true },
-    { kind: 'bottom', icon: 'icon-align-right', rot: true },
-] as const;
-
 function setArrow(value: unknown) {
     if (value === 'none') cmd.run('link.line');
     else if (value === 'end') cmd.run('link.arrow');
@@ -92,21 +78,21 @@ function setArrow(value: unknown) {
 
         <div v-if="nodeCount > 1" class="tools" role="group" :aria-label="t('context.align.title')">
             <button
-                v-for="a in ALIGN"
+                v-for="a in ALIGN_COMMANDS"
                 :key="a.kind"
                 class="tool"
                 :title="t(`context.align.${a.kind}`)"
                 :aria-label="t(`context.align.${a.kind}`)"
                 @click="cmd.run('align.' + a.kind)"
             >
-                <i :class="[a.icon, { rot: a.rot }]" />
+                <TaoIcon :name="cmd.icon('align.' + a.kind)!" />
             </button>
             <span class="gap" />
             <button class="tool" :disabled="!cmd.enabled('align.distributeX')" :title="cmd.label('align.distributeX')" :aria-label="cmd.label('align.distributeX')" @click="cmd.run('align.distributeX')">
-                <DistributeIcon axis="x" />
+                <TaoIcon name="distribute-x" />
             </button>
             <button class="tool" :disabled="!cmd.enabled('align.distributeY')" :title="cmd.label('align.distributeY')" :aria-label="cmd.label('align.distributeY')" @click="cmd.run('align.distributeY')">
-                <DistributeIcon axis="y" />
+                <TaoIcon name="distribute-y" />
             </button>
         </div>
 
@@ -115,18 +101,16 @@ function setArrow(value: unknown) {
                 <TaoSegmentedOption value="none">{{ t('link.line') }}</TaoSegmentedOption>
                 <TaoSegmentedOption value="end">{{ t('link.arrow') }} →</TaoSegmentedOption>
             </TaoSegmented>
-            <TaoButton variant="secondary" size="small" @click="cmd.run('link.reverse')">
-                <i class="icon-shuffle" />{{ t('link.reverse') }}
-            </TaoButton>
-            <TaoButton variant="secondary" size="small" :title="t('context.straightenHint')" @click="cmd.run('link.straighten')">
-                <i class="icon-minus" />{{ t('context.straighten') }}
+            <TaoButton variant="secondary" size="small" icon="link-reverse" @click="cmd.run('link.reverse')">{{ t('link.reverse') }}</TaoButton>
+            <TaoButton variant="secondary" size="small" icon="link-straighten" :title="t('context.straightenHint')" @click="cmd.run('link.straighten')">
+                {{ t('context.straighten') }}
             </TaoButton>
         </template>
 
         <span v-if="canColor || link || nodeCount > 1" class="sep" />
 
-        <TaoButton variant="secondary" tone="danger" size="small" :title="cmd.hint('edit.delete')" @click="cmd.run('edit.delete')">
-            <i class="icon-trash-1" />{{ t('context.delete') }}
+        <TaoButton variant="secondary" tone="danger" size="small" icon="tao-trash" :title="cmd.hint('edit.delete')" @click="cmd.run('edit.delete')">
+            {{ t('context.delete') }}
         </TaoButton>
     </div>
 </template>
@@ -235,19 +219,6 @@ function setArrow(value: unknown) {
 .tool:disabled {
     opacity: 0.35;
     cursor: default;
-}
-
-.tool i {
-    display: inline-block;
-}
-
-.tool i::before {
-    margin: 0;
-}
-
-/* Вертикальное выравнивание: те же иконки, повёрнутые на 90°. */
-.tool i.rot {
-    transform: rotate(90deg);
 }
 
 .gap {

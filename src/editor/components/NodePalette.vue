@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, ref, watch } from 'vue';
+import { TaoIcon } from '@1337exp/taoui';
 import { useI18n } from '@/i18n';
 import { useEditor } from '../store';
 import { coarse } from '@1337exp/taoux/touch';
@@ -88,7 +89,7 @@ function onKeyDown(e: KeyboardEvent) {
                 @mousemove="active = i"
                 @click="editor.createFromPalette(item.def.id)"
             >
-                <i v-if="item.def.icon" :class="item.def.icon" />{{ item.title }}
+                <TaoIcon v-if="item.def.icon" :name="item.def.icon" />{{ item.title }}
             </button>
         </div>
     </div>

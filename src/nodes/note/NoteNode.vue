@@ -26,7 +26,7 @@ const { t } = useI18n();
     padding: 10px 12px;
     border: 0;
     border-radius: inherit;
-    background: var(--nextup-bg-card);
+    background: transparent;
     color: var(--tao-color-text, #e5e7eb);
     font: inherit;
     font-size: 14px;

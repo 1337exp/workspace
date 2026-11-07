@@ -39,24 +39,24 @@ export function createEditorCommands(editor: Editor) {
     const list: Command[] = [
         { id: 'file.new', label: () => t('file.new'), icon: 'tao-plus', run: () => editor.newWorkspace() },
         { id: 'file.open', label: () => t('file.open'), icon: 'tao-folder', shortcut: 'Mod+O', run: () => openFromFile(editor) },
-        { id: 'file.save', label: () => t('file.save'), shortcut: 'Mod+S', run: () => saveToFile(editor) },
+        { id: 'file.save', label: () => t('file.save'), icon: 'file-save', shortcut: 'Mod+S', run: () => saveToFile(editor) },
 
         { id: 'edit.undo', label: () => t('history.undo'), icon: 'tao-undo', shortcut: 'Mod+Z', enabled: () => editor.canUndo, run: () => editor.undo() },
         { id: 'edit.redo', label: () => t('history.redo'), icon: 'tao-redo', shortcut: ['Mod+Shift+Z', 'Mod+Y'], enabled: () => editor.canRedo, run: () => editor.redo() },
         { id: 'edit.delete', label: () => t('context.delete'), icon: 'tao-trash', shortcut: ['Delete', 'Backspace'], enabled: hasSelection, run: () => editor.removeSelected() },
 
-        { id: 'view.grid', label: () => t('grid.label'), checked: () => editor.snapEnabled, run: () => (editor.snapEnabled = !editor.snapEnabled) },
+        { id: 'view.grid', label: () => t('grid.label'), icon: 'view-grid', checked: () => editor.snapEnabled, run: () => (editor.snapEnabled = !editor.snapEnabled) },
 
         { id: 'link.line', label: () => t('link.line'), group: 'arrow', checked: () => arrow() === 'none', run: () => editor.setArrowStyle('none') },
         { id: 'link.arrow', label: () => t('link.arrow'), group: 'arrow', checked: () => arrow() === 'end', run: () => editor.setArrowStyle('end') },
-        { id: 'link.reverse', label: () => t('link.reverse'), enabled: () => link() !== undefined, run: () => editor.reverseSelected() },
-        { id: 'link.straighten', label: () => t('context.straighten'), enabled: () => link() !== undefined, run: () => editor.straightenSelectedLink() },
+        { id: 'link.reverse', label: () => t('link.reverse'), icon: 'link-reverse', enabled: () => link() !== undefined, run: () => editor.reverseSelected() },
+        { id: 'link.straighten', label: () => t('context.straighten'), icon: 'link-straighten', enabled: () => link() !== undefined, run: () => editor.straightenSelectedLink() },
 
         ...ALIGN_COMMANDS.map(
-            ({ kind, key }): Command => ({ id: `align.${kind}`, label: () => t(key), enabled: () => nodeCount() > 1, run: () => editor.alignSelected(kind) }),
+            ({ kind, key }): Command => ({ id: `align.${kind}`, label: () => t(key), icon: `align-${kind}`, enabled: () => nodeCount() > 1, run: () => editor.alignSelected(kind) }),
         ),
-        { id: 'align.distributeX', label: () => t('context.align.distributeX'), enabled: () => nodeCount() > 2, run: () => editor.distributeSelected('x') },
-        { id: 'align.distributeY', label: () => t('context.align.distributeY'), enabled: () => nodeCount() > 2, run: () => editor.distributeSelected('y') },
+        { id: 'align.distributeX', label: () => t('context.align.distributeX'), icon: 'distribute-x', enabled: () => nodeCount() > 2, run: () => editor.distributeSelected('x') },
+        { id: 'align.distributeY', label: () => t('context.align.distributeY'), icon: 'distribute-y', enabled: () => nodeCount() > 2, run: () => editor.distributeSelected('y') },
 
         // По команде на каждый тип ноды (кроме точек на связи): кнопки панели и пункты меню берутся отсюда же.
         ...editor.registry
@@ -83,6 +83,8 @@ export interface EditorCommands {
     claimsKey(event: KeyboardEvent): boolean;
     /** Подпись, чтобы шаблон перерисовался при смене языка. */
     label(id: string): string;
+    /** Имя иконки команды для `TaoIcon`. */
+    icon(id: string): string | undefined;
     /** Подпись + сочетание для подсказки: «Отменить (Ctrl+Z)». */
     hint(id: string): string;
     enabled(id: string): boolean;
@@ -108,6 +110,7 @@ export function useCommands(): EditorCommands {
             commands,
             claimsKey,
             label: text,
+            icon: (id) => commands.get(id)?.icon,
             hint: (id) => {
                 const key = commands.shortcutLabel(id);
                 return key ? `${text(id)} (${key})` : text(id);

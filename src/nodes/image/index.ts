@@ -5,7 +5,7 @@ import ImageNode from './ImageNode.vue';
 export default defineNode({
     id: 'image',
     title: 'Image',
-    icon: 'icon-color-adjust',
+    icon: 'node-image',
     size: { w: 260, h: 200, minW: 120, minH: 90 },
     create: () => ({ url: '' }),
     component: ImageNode,

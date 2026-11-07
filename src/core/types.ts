@@ -21,7 +21,7 @@ export interface NodeDef<D extends NodeData = NodeData> {
     migrate?(data: NodeData, from: number): D;
     /** Vue-компонент содержимого. */
     component: Component;
-    /** Класс иконки из fontello, например `icon-pencil`. */
+    /** Имя иконки для `TaoIcon` (встроенная `tao-*` или из `src/icons.ts`), например `node-note`. */
     icon?: string;
     /** Поле `data` с названием ноды: оно показывается в полосе вместо названия типа и правится двойным кликом по полосе. */
     titleKey?: string;

@@ -5,7 +5,7 @@ import GroupNode from './GroupNode.vue';
 export default defineNode({
     id: 'group',
     title: 'Group',
-    icon: 'icon-minus-squared-alt',
+    icon: 'node-group',
     size: { w: 480, h: 320, minW: 160, minH: 120 },
     create: () => ({ title: '' }),
     titleKey: 'title',

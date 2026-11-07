@@ -24,17 +24,15 @@ function setLang(value: unknown) {
 
 <template>
     <div class="toolbar" @pointerdown.stop @wheel.stop>
-        <TaoButton variant="secondary" size="small" @click="cmd.run('file.new')"><i class="icon-plus" />{{ cmd.label('file.new') }}</TaoButton>
-        <TaoButton variant="secondary" size="small" :title="cmd.hint('file.open')" @click="cmd.run('file.open')"><i class="icon-docs" />{{ cmd.label('file.open') }}</TaoButton>
-        <TaoButton variant="secondary" size="small" :title="cmd.hint('file.save')" @click="cmd.run('file.save')"><i class="icon-download" />{{ cmd.label('file.save') }}</TaoButton>
+        <TaoButton variant="secondary" size="small" icon="tao-plus" @click="cmd.run('file.new')">{{ cmd.label('file.new') }}</TaoButton>
+        <TaoButton variant="secondary" size="small" icon="tao-folder" :title="cmd.hint('file.open')" @click="cmd.run('file.open')">{{ cmd.label('file.open') }}</TaoButton>
+        <TaoButton variant="secondary" size="small" icon="file-save" :title="cmd.hint('file.save')" @click="cmd.run('file.save')">{{ cmd.label('file.save') }}</TaoButton>
 
         <span class="sep" />
 
-        <TaoButton variant="secondary" size="small" :disabled="!cmd.enabled('edit.undo')" :title="cmd.hint('edit.undo')" @click="cmd.run('edit.undo')">↶</TaoButton>
-        <TaoButton variant="secondary" size="small" :disabled="!cmd.enabled('edit.redo')" :title="cmd.hint('edit.redo')" @click="cmd.run('edit.redo')">↷</TaoButton>
-        <TaoButton :variant="cmd.checked('view.grid') ? 'primary' : 'secondary'" size="small" :title="t('grid.hint')" @click="cmd.run('view.grid')">
-            <i class="icon-menu" />{{ cmd.label('view.grid') }}
-        </TaoButton>
+        <TaoButton variant="secondary" size="small" icon="tao-undo" :aria-label="cmd.label('edit.undo')" :disabled="!cmd.enabled('edit.undo')" :title="cmd.hint('edit.undo')" @click="cmd.run('edit.undo')" />
+        <TaoButton variant="secondary" size="small" icon="tao-redo" :aria-label="cmd.label('edit.redo')" :disabled="!cmd.enabled('edit.redo')" :title="cmd.hint('edit.redo')" @click="cmd.run('edit.redo')" />
+        <TaoButton :variant="cmd.checked('view.grid') ? 'primary' : 'secondary'" size="small" icon="view-grid" :title="t('grid.hint')" @click="cmd.run('view.grid')">{{ cmd.label('view.grid') }}</TaoButton>
 
         <span class="sep" />
 
@@ -43,9 +41,10 @@ function setLang(value: unknown) {
             :key="def.id"
             variant="secondary"
             size="small"
+            :icon="def.icon"
             @click="cmd.run('node.add.' + def.id)"
         >
-            <i v-if="def.icon" :class="def.icon" />{{ cmd.label('node.add.' + def.id) }}
+            {{ cmd.label('node.add.' + def.id) }}
         </TaoButton>
 
         <span class="sep" />
@@ -54,19 +53,18 @@ function setLang(value: unknown) {
             <TaoSegmentedOption value="none">{{ cmd.label('link.line') }}</TaoSegmentedOption>
             <TaoSegmentedOption value="end">{{ cmd.label('link.arrow') }} →</TaoSegmentedOption>
         </TaoSegmented>
-        <TaoButton variant="secondary" size="small" :disabled="!cmd.enabled('link.reverse')" @click="cmd.run('link.reverse')">
-            <i class="icon-shuffle" />{{ cmd.label('link.reverse') }}
-        </TaoButton>
+        <TaoButton variant="secondary" size="small" :disabled="!cmd.enabled('link.reverse')" icon="link-reverse" @click="cmd.run('link.reverse')">{{ cmd.label('link.reverse') }}</TaoButton>
 
         <template v-if="coarse">
             <span class="sep" />
             <TaoButton
                 :variant="editor.selectMode ? 'primary' : 'secondary'"
                 size="small"
+                icon="touch-select"
                 :title="t('touch.selectHint')"
                 @click="editor.selectMode = !editor.selectMode"
             >
-                <i class="icon-dot-circled" />{{ t('touch.select') }}
+                {{ t('touch.select') }}
             </TaoButton>
         </template>
 
