@@ -213,9 +213,13 @@ function finishTitle(save: boolean) {
 /* Стикер: заливка цветом ноды (без цвета жёлтая), тёмный текст, мягкая тень. */
 .node.sticker .bare-content {
     border-radius: 4px;
-    background: color-mix(in srgb, var(--tint, var(--tint-yellow)) 82%, white);
+    background: var(--sticker-default);
     color: #1f2430;
     box-shadow: var(--ws-shadow);
+}
+
+.node.sticker.tinted .bare-content {
+    background: color-mix(in srgb, var(--tint) 82%, white);
 }
 
 .node.sticker.selected .bare-content {

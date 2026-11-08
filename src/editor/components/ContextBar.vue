@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, type CSSProperties, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { TaoButton, TaoInputNumber, TaoPopover, TaoSegmented, TaoSegmentedOption, TaoToolbar, TaoToolbarGroup, TaoToolbarSeparator } from '@1337exp/taoui';
+import { TaoButton, TaoPopover, TaoSegmented, TaoSegmentedOption, TaoToolbar, TaoToolbarGroup, TaoToolbarSeparator } from '@1337exp/taoui';
 import { worldToScreen } from '@1337exp/taoux/camera';
 import { coarse } from '@1337exp/taoux/touch';
 import { selectionBounds } from '@/core/bounds';
@@ -10,7 +10,8 @@ import { useI18n, type MessageKey } from '@/i18n';
 import { ALIGN_COMMANDS, useCommands } from '../commands';
 import { floatingPosition } from '../floating';
 import { rememberEmoji } from '@/nodes/emoji';
-import { FONT_INPUT_MAX, FONT_INPUT_MIN, fittedSizes } from '@/nodes/note/fit';
+import { fittedSizes } from '@/nodes/note/fit';
+import FontSizeField from './FontSizeField.vue';
 import { useEditor } from '../store';
 import EmojiPicker from './EmojiPicker.vue';
 
@@ -72,10 +73,6 @@ function patchTexts(patch: Record<string, unknown>) {
 }
 /** Число в поле: заданный размер, а при «Авто» тот, с которым стикер рисуется сейчас. */
 const shownSize = computed(() => fontSize.value || fittedSizes[texty.value[0]?.id ?? ''] || null);
-/** Поле числа: пусто или вне границ значит «Авто» не трогаем, число ставит ручной размер. */
-function setSize(value: number | null) {
-    if (value !== null && value >= FONT_INPUT_MIN) patchTexts({ size: value });
-}
 const textVAlign = computed<'top' | 'middle' | 'bottom'>(() => common((d) => (d.valign === 'top' || d.valign === 'bottom' ? d.valign : 'middle')) ?? 'middle');
 const VALIGNS = ['top', 'middle', 'bottom'] as const;
 const cycleVAlign = () => patchTexts({ valign: VALIGNS[(VALIGNS.indexOf(textVAlign.value) + 1) % VALIGNS.length] });
@@ -92,7 +89,7 @@ const dotColor = computed(() => {
     const c = editor.selectionColor;
     if (c) return `var(--tint-${c})`;
     const allSticker = editor.colorable.every((id) => editor.registry.find(editor.workspace.nodes[id]?.type ?? '')?.sticker);
-    return allSticker ? 'var(--tint-yellow)' : null;
+    return allSticker ? 'var(--sticker-default)' : null;
 });
 
 const bar = ref<HTMLElement | null>(null);
@@ -190,16 +187,7 @@ function setArrow(value: unknown) {
             <template v-if="texty.length">
                 <TaoToolbarSeparator v-if="canColor" />
                 <TaoToolbarGroup :label="t('context.text')">
-                    <TaoInputNumber
-                        class="size-input"
-                        size="small"
-                        :model-value="shownSize"
-                        :min="FONT_INPUT_MIN"
-                        :max="FONT_INPUT_MAX"
-                        :aria-label="t('context.fontSize')"
-                        @commit="setSize"
-                    />
-                    <TaoButton variant="ghost" tone="neutral" :pressed="fontSize === 0" :aria-label="t('context.fontAuto')" :title="t('context.fontAuto')" @click="patchTexts({ size: 0 })">{{ t('context.auto') }}</TaoButton>
+                    <FontSizeField :size="shownSize" :auto="fontSize === 0" :title="t('context.fontAuto')" @set="(n) => patchTexts({ size: n })" @auto="patchTexts({ size: 0 })" />
                     <TaoButton variant="ghost" tone="neutral" icon="text-bold" :pressed="isBold" :aria-label="t('context.bold')" :title="t('context.bold')" @click="patchTexts({ bold: !isBold })" />
                     <TaoButton variant="ghost" tone="neutral" :icon="`text-align-${textAlign}`" :aria-label="t('context.textAlign')" :title="t('context.textAlign')" @click="cycleAlign" />
                     <TaoButton variant="ghost" tone="neutral" :icon="`text-valign-${textVAlign}`" :aria-label="t('context.textVAlign')" :title="t('context.textVAlign')" @click="cycleVAlign" />
@@ -317,10 +305,6 @@ function setArrow(value: unknown) {
 
 .palette {
     padding: 8px;
-}
-
-.size-input {
-    width: 76px;
 }
 
 .swatches {

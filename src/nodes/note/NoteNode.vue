@@ -69,6 +69,7 @@ watch(
     { immediate: true },
 );
 watch(() => [props.data.text, props.data.size, props.data.bold], () => nextTick(refit));
+
 // Размер для панели: там показывается число и при «Авто».
 watch(px, (v) => props.nodeId && (fittedSizes[props.nodeId] = v), { immediate: true });
 
