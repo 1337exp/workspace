@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, type CSSProperties, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { TaoButton, TaoPopover, TaoSegmented, TaoSegmentedOption, TaoToolbar, TaoToolbarGroup, TaoToolbarSeparator } from '@1337exp/taoui';
+import { TaoButton, TaoInputNumber, TaoPopover, TaoSegmented, TaoSegmentedOption, TaoToolbar, TaoToolbarGroup, TaoToolbarSeparator } from '@1337exp/taoui';
 import { worldToScreen } from '@1337exp/taoux/camera';
 import { coarse } from '@1337exp/taoux/touch';
 import { selectionBounds } from '@/core/bounds';
@@ -10,7 +10,7 @@ import { useI18n, type MessageKey } from '@/i18n';
 import { ALIGN_COMMANDS, useCommands } from '../commands';
 import { floatingPosition } from '../floating';
 import { rememberEmoji } from '@/nodes/emoji';
-import { stepFontSize } from '@/nodes/note/fit';
+import { FONT_INPUT_MAX, FONT_INPUT_MIN, fittedSizes } from '@/nodes/note/fit';
 import { useEditor } from '../store';
 import EmojiPicker from './EmojiPicker.vue';
 
@@ -70,7 +70,15 @@ const ALIGNS = ['left', 'center', 'right'] as const;
 function patchTexts(patch: Record<string, unknown>) {
     for (const n of texty.value) editor.patchData(n.id, patch);
 }
-const stepSize = (dir: 1 | -1) => patchTexts({ size: stepFontSize(fontSize.value, dir) });
+/** Число в поле: заданный размер, а при «Авто» тот, с которым стикер рисуется сейчас. */
+const shownSize = computed(() => fontSize.value || fittedSizes[texty.value[0]?.id ?? ''] || null);
+/** Поле числа: пусто или вне границ значит «Авто» не трогаем, число ставит ручной размер. */
+function setSize(value: number | null) {
+    if (value !== null && value >= FONT_INPUT_MIN) patchTexts({ size: value });
+}
+const textVAlign = computed<'top' | 'middle' | 'bottom'>(() => common((d) => (d.valign === 'top' || d.valign === 'bottom' ? d.valign : 'middle')) ?? 'middle');
+const VALIGNS = ['top', 'middle', 'bottom'] as const;
+const cycleVAlign = () => patchTexts({ valign: VALIGNS[(VALIGNS.indexOf(textVAlign.value) + 1) % VALIGNS.length] });
 const cycleAlign = () => patchTexts({ align: ALIGNS[(ALIGNS.indexOf(textAlign.value) + 1) % ALIGNS.length] });
 
 /** Цвет одной точкой: окошко с палитрой открывается по нажатию на неё. */
@@ -182,11 +190,19 @@ function setArrow(value: unknown) {
             <template v-if="texty.length">
                 <TaoToolbarSeparator v-if="canColor" />
                 <TaoToolbarGroup :label="t('context.text')">
-                    <TaoButton variant="ghost" tone="neutral" class="size-label" :aria-label="t('context.fontAuto')" :title="t('context.fontAuto')" @click="patchTexts({ size: 0 })">{{ fontSize || t('context.auto') }}</TaoButton>
-                    <TaoButton variant="ghost" tone="neutral" icon="step-up" :aria-label="t('context.fontUp')" :title="t('context.fontUp')" @click="stepSize(1)" />
-                    <TaoButton variant="ghost" tone="neutral" icon="step-down" :aria-label="t('context.fontDown')" :title="t('context.fontDown')" @click="stepSize(-1)" />
+                    <TaoInputNumber
+                        class="size-input"
+                        size="small"
+                        :model-value="shownSize"
+                        :min="FONT_INPUT_MIN"
+                        :max="FONT_INPUT_MAX"
+                        :aria-label="t('context.fontSize')"
+                        @commit="setSize"
+                    />
+                    <TaoButton variant="ghost" tone="neutral" :pressed="fontSize === 0" :aria-label="t('context.fontAuto')" :title="t('context.fontAuto')" @click="patchTexts({ size: 0 })">{{ t('context.auto') }}</TaoButton>
                     <TaoButton variant="ghost" tone="neutral" icon="text-bold" :pressed="isBold" :aria-label="t('context.bold')" :title="t('context.bold')" @click="patchTexts({ bold: !isBold })" />
                     <TaoButton variant="ghost" tone="neutral" :icon="`text-align-${textAlign}`" :aria-label="t('context.textAlign')" :title="t('context.textAlign')" @click="cycleAlign" />
+                    <TaoButton variant="ghost" tone="neutral" :icon="`text-valign-${textVAlign}`" :aria-label="t('context.textVAlign')" :title="t('context.textVAlign')" @click="cycleVAlign" />
                 </TaoToolbarGroup>
             </template>
 
@@ -303,9 +319,8 @@ function setArrow(value: unknown) {
     padding: 8px;
 }
 
-.size-label {
-    min-width: 3.2em;
-    font-variant-numeric: tabular-nums;
+.size-input {
+    width: 76px;
 }
 
 .swatches {

@@ -1,3 +1,5 @@
+import { reactive } from 'vue';
+
 /**
  * Подбор размера шрифта стикера: самый крупный размер из диапазона, при котором текст влезает по высоте.
  * Высота при данном размере приходит от вызывающего (`heightAt`), поэтому функция не зависит от DOM и проверяется тестом.
@@ -6,8 +8,15 @@
  */
 export const FONT_MIN = 10;
 export const FONT_MAX = 48;
-/** Размеры для ручного выбора в панели (кроме «Авто»). / Sizes for manual choice in the bar (besides "Auto"). */
-export const FONT_STEPS: readonly number[] = [12, 14, 16, 20, 24, 32, 40, 48, 64];
+/** Границы ручного ввода в панели. / Limits of the manual input in the bar. */
+export const FONT_INPUT_MIN = 8;
+export const FONT_INPUT_MAX = 200;
+
+/**
+ * Размер шрифта, с которым стикер рисуется сейчас (по id ноды): панель показывает его и при «Авто».
+ * The font size a sticker is drawn with now (by node id): the bar shows it also in "Auto".
+ */
+export const fittedSizes = reactive<Record<string, number>>({});
 
 export function fitFontSize(heightAt: (px: number) => number, available: number, min = FONT_MIN, max = FONT_MAX): number {
     if (available <= 0 || heightAt(max) <= available) return max;
@@ -20,11 +29,4 @@ export function fitFontSize(heightAt: (px: number) => number, available: number,
         else hi = mid;
     }
     return lo;
-}
-
-/** Следующий размер в ряду `FONT_STEPS`; из «Авто» (0) вверх идёт к 24, вниз к 14. / The next size in the row. */
-export function stepFontSize(current: number, dir: 1 | -1): number {
-    if (!current) return dir > 0 ? 24 : 14;
-    const next = dir > 0 ? FONT_STEPS.find((s) => s > current) : [...FONT_STEPS].reverse().find((s) => s < current);
-    return next ?? current;
 }

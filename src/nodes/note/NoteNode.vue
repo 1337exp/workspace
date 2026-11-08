@@ -1,18 +1,23 @@
 <script lang="ts" setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from '@/i18n';
-import { fitFontSize } from './fit';
+import { fitFontSize, fittedSizes } from './fit';
 
 /**
  * Стикер: цветной квадрат с текстом. По умолчанию текст по центру и крупный; пока печатаешь, он уменьшается, чтобы
  * влезть, а если стикер растянуть, шрифт растёт под свободное место. Размер шрифта можно задать руками (`size`).
+ * Размер всегда считается по невидимому «зеркалу» с тем же текстом (при правке поле ввода лежит поверх него), поэтому
+ * текст не меняется в размере при входе в правку.
  * A sticker: a coloured square with text. By default the text is centred and large; while typing it shrinks to fit, and
  * when the sticker is stretched the font grows into the free space. The size can be set by hand (`size`).
+ * The size is always measured on an invisible "mirror" with the same text (while editing the field lies over it), so the
+ * text does not change size when editing starts.
  */
 const props = defineProps<{
-    data: { text: string; size?: number; bold?: boolean; align?: 'left' | 'center' | 'right' };
+    data: { text: string; size?: number; bold?: boolean; align?: 'left' | 'center' | 'right'; valign?: 'top' | 'middle' | 'bottom' };
     selected: boolean;
     editing?: boolean;
+    nodeId?: string;
 }>();
 const emit = defineEmits<{ change: [patch: { text: string }]; 'edit-end': [] }>();
 
@@ -25,44 +30,30 @@ const field = ref<HTMLTextAreaElement | null>(null);
 /** Размер, подобранный автоматически (если `size` не задан). */
 const fitted = ref(24);
 
-const px = computed(() => (props.data.size && props.data.size > 0 ? props.data.size : fitted.value));
+const manual = computed(() => (props.data.size && props.data.size > 0 ? props.data.size : 0));
+const px = computed(() => manual.value || fitted.value);
 const align = computed(() => props.data.align ?? 'center');
+const valign = computed(() => props.data.valign ?? 'middle');
+/** Что показывает зеркало: текст (с невидимым знаком в конце, чтобы последний перенос строки считался) или подсказка. */
+const shown = computed(() => (props.editing ? `${props.data.text}​` : props.data.text || t('nodes.note.placeholder')));
 
-/** Высота текста при размере шрифта `size`; у поля ввода сжимаем до нуля, чтобы `scrollHeight` показал высоту текста. */
+/** Высота текста при размере шрифта `size`; если самое длинное слово не влезает по ширине, размер не подходит. */
 function heightAt(size: number): number {
-    const el = field.value ?? view.value;
+    const el = view.value;
     if (!el) return 0;
     el.style.fontSize = `${size}px`;
-    // Слова не режем: если самое длинное не влезает по ширине, этот размер не подходит.
     el.style.overflowWrap = 'normal';
     const wide = el.scrollWidth > el.clientWidth + 1;
     el.style.overflowWrap = '';
-    if (wide) return Infinity;
-    if (el === field.value) {
-        el.style.height = '0px';
-        const h = el.scrollHeight;
-        el.style.height = '';
-        return h;
-    }
-    return el.offsetHeight;
+    return wide ? Infinity : el.offsetHeight;
 }
 
 function refit() {
     const box = root.value;
-    if (!box || (props.data.size && props.data.size > 0)) return;
+    if (!box || manual.value) return;
     // Пустой стикер показывает подсказку обычным размером, а не огромным.
     fitted.value = props.data.text || props.editing ? fitFontSize(heightAt, box.clientHeight - PAD * 2) : 22;
-    // Вернуть управление размером шаблону.
-    (field.value ?? view.value)?.style.removeProperty('font-size');
-    if (field.value) sizeField();
-}
-
-/** Поле ввода по высоте равно тексту (по центру его ставит flex у родителя). */
-function sizeField() {
-    const ta = field.value;
-    if (!ta) return;
-    ta.style.height = '0px';
-    ta.style.height = `${ta.scrollHeight}px`;
+    view.value?.style.removeProperty('font-size'); // дальше размер ведёт шаблон
 }
 
 watch(
@@ -78,6 +69,8 @@ watch(
     { immediate: true },
 );
 watch(() => [props.data.text, props.data.size, props.data.bold], () => nextTick(refit));
+// Размер для панели: там показывается число и при «Авто».
+watch(px, (v) => props.nodeId && (fittedSizes[props.nodeId] = v), { immediate: true });
 
 let observer: ResizeObserver | null = null;
 onMounted(() => {
@@ -87,7 +80,10 @@ onMounted(() => {
     }
     refit();
 });
-onBeforeUnmount(() => observer?.disconnect());
+onBeforeUnmount(() => {
+    observer?.disconnect();
+    if (props.nodeId) delete fittedSizes[props.nodeId];
+});
 
 function onInput(e: Event) {
     emit('change', { text: (e.target as HTMLTextAreaElement).value });
@@ -95,20 +91,22 @@ function onInput(e: Event) {
 </script>
 
 <template>
-    <div ref="root" class="sticker" :class="[`a-${align}`, { bold: data.bold }]" :style="{ '--px': `${px}px`, '--pad': `${PAD}px` }">
-        <textarea
-            v-if="editing"
-            ref="field"
-            class="body edit"
-            :value="data.text"
-            :placeholder="t('nodes.note.placeholder')"
-            spellcheck="false"
-            @input="onInput"
-            @blur="emit('edit-end')"
-            @keydown.esc.stop.prevent="($event.target as HTMLTextAreaElement).blur()"
-        />
-        <!-- data-node-handle: стикер таскают за любое место, двойной клик включает правку. -->
-        <div v-else ref="view" class="body view" :class="{ empty: !data.text }" data-node-handle>{{ data.text || t('nodes.note.placeholder') }}</div>
+    <div ref="root" class="sticker" :class="[`a-${align}`, `v-${valign}`, { bold: data.bold }]" :style="{ '--px': `${px}px`, '--pad': `${PAD}px` }">
+        <div class="slot">
+            <!-- Зеркало: по нему считается размер; без правки оно же и показывает текст, его таскают за любое место. -->
+            <div ref="view" class="body view" :class="{ empty: !data.text && !editing, ghost: editing }" :data-node-handle="editing ? undefined : ''">{{ shown }}</div>
+            <textarea
+                v-if="editing"
+                ref="field"
+                class="body edit"
+                :value="data.text"
+                :placeholder="t('nodes.note.placeholder')"
+                spellcheck="false"
+                @input="onInput"
+                @blur="emit('edit-end')"
+                @keydown.esc.stop.prevent="($event.target as HTMLTextAreaElement).blur()"
+            />
+        </div>
     </div>
 </template>
 
@@ -124,10 +122,23 @@ function onInput(e: Event) {
     border-radius: inherit;
 }
 
+.sticker.v-top {
+    align-items: flex-start;
+}
+
+.sticker.v-bottom {
+    align-items: flex-end;
+}
+
+.slot {
+    position: relative;
+    width: 100%;
+    max-height: 100%;
+}
+
 .body {
     box-sizing: border-box;
     width: 100%;
-    max-height: 100%;
     margin: 0;
     padding: 0;
     border: 0;
@@ -164,7 +175,14 @@ function onInput(e: Event) {
     opacity: 0.45;
 }
 
+.ghost {
+    visibility: hidden;
+}
+
 .edit {
+    position: absolute;
+    inset: 0;
+    height: 100%;
     overflow: hidden;
 }
 </style>

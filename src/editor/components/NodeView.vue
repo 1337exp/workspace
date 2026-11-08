@@ -93,6 +93,7 @@ function finishTitle(save: boolean) {
                 :data="node.data"
                 :selected="selected"
                 :editing="inlineEditing"
+                :node-id="node.id"
                 @change="onChange"
                 @edit-end="editor.endEdit(node.id)"
                 @fit="(height: number) => editor.fitHeight(node.id, height)"

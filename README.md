@@ -26,7 +26,7 @@ npm run screenshot  # docs/media/*.png for the README, needs Chrome or Edge
 
 | Node | Key | What it is |
 |---|---|---|
-| Sticker | `N` | a coloured square with centred text; the font is large and shrinks while you type to fit, and grows when the sticker is stretched. The bar over it has the font size ("Auto" or a number), bold and alignment. A double click edits the text, it is dragged by any place |
+| Sticker | `N` | a coloured square with centred text; the font is large and shrinks while you type to fit, and grows when the sticker is stretched. The bar over it has the font size (a number; "Auto" fits it), bold and alignment (horizontal and vertical). A double click edits the text, it is dragged by any place |
 | Text | `T` | text right on the canvas, no frame; click and type at once; a double click edits; the height follows the content, an emptied text disappears; the colour from the bar tints the letters |
 | Checklist | `L` | items with a tick: `Enter` adds an item below, `Backspace` in an empty one removes it, `↑` `↓` walk the items, an item is dragged by the handle on the left (and from the keyboard: on the handle `Space` lifts, arrows move, `Space` drops, `Esc` cancels), pasting multi-line text spreads it over items (`-`, `*`, `•` and `[ ]` / `[x]` are understood); a counter and a progress line at the bottom; "Hide completed" in the bar over the node |
 | Group | `G` | a frame under the rest: nodes wholly inside it travel with it when you drag it by its strip |
