@@ -303,6 +303,11 @@ function setArrow(value: unknown) {
     white-space: nowrap;
 }
 
+/* Точка цвета занимает место кнопки панели (36 px), поэтому от краёв такой же отступ, как у соседних кнопок. */
+.dot {
+    margin: 7px;
+}
+
 .palette {
     padding: 8px;
 }
@@ -364,6 +369,10 @@ function setArrow(value: unknown) {
 
     .swatches {
         gap: 8px;
+    }
+
+    .dot {
+        margin: 2px;
     }
 }
 </style>
