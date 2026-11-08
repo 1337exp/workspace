@@ -105,6 +105,11 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         hint: 'Lines and pulling to the edges and centres of other nodes. Hold Alt to disable temporarily',
     },
 
+    emoji: {
+        pick: 'Choose an emoji',
+        change: 'Change the emoji',
+    },
+
     tool: {
         dock: 'Tools',
         select: 'Select',

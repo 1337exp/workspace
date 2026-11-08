@@ -25,6 +25,7 @@ export function registerAppIcons() {
         'text-large': { body: '<path d="M3 19l5-13 5 13M5 14h6M17 10v8M14 14h6"/>' },
         'node-link': { body: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>' },
         'link-open': { body: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>' },
+        'node-emoji': { body: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>' },
         'node-image': { body: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>' },
         'node-group': { body: '<rect x="4" y="5" width="16" height="14" rx="2" stroke-dasharray="3 3"/>' },
 

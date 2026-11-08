@@ -1,10 +1,13 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
-import { TaoButton, TaoToolbar, TaoToolbarGroup } from '@1337exp/taoui';
+import { ref } from 'vue';
+import { TaoButton, TaoPopover, TaoToolbar, TaoToolbarGroup } from '@1337exp/taoui';
 import { coarse } from '@1337exp/taoux/touch';
 import { useI18n } from '@/i18n';
 import { useCommands } from '../commands';
+import { rememberEmoji } from '@/nodes/emoji';
 import { useEditor } from '../store';
+import EmojiPicker from './EmojiPicker.vue';
 
 /**
  * Панель инструментов у левого края: «Выбор», по инструменту на каждый тип ноды, затем отмена и повтор.
@@ -18,6 +21,16 @@ const editor = useEditor();
 const cmd = useCommands();
 const { t } = useI18n();
 
+/** Окошко выбора эмодзи у кнопки стикера. */
+const emojiOpen = ref(false);
+
+/** Выбрали эмодзи: он ставится следующим кликом по холсту и запоминается для клавиши `E`. */
+function pickEmoji(emoji: string) {
+    rememberEmoji(emoji);
+    editor.setTool('emoji', { emoji });
+    emojiOpen.value = false;
+}
+
 const toolIds = computed(() => ['tool.select', ...editor.registry.all().filter((d) => !d.point).map((d) => `tool.place.${d.id}`)]);
 </script>
 
@@ -25,9 +38,22 @@ const toolIds = computed(() => ['tool.select', ...editor.registry.all().filter((
     <div class="dock" @pointerdown.stop @wheel.stop @contextmenu.prevent>
         <TaoToolbar orientation="vertical" :label="t('tool.dock')">
             <TaoToolbarGroup>
+                <template v-for="id in toolIds" :key="id">
+                <TaoPopover v-if="id === 'tool.place.emoji'" v-model="emojiOpen" placement="right-start">
+                    <template #trigger>
+                        <TaoButton
+                            variant="ghost"
+                            tone="neutral"
+                            :icon="cmd.icon(id)"
+                            :pressed="cmd.checked(id)"
+                            :aria-label="t('emoji.pick')"
+                            :shortcut="cmd.shortcutLabel(id)"
+                        />
+                    </template>
+                    <EmojiPicker @pick="pickEmoji" />
+                </TaoPopover>
                 <TaoButton
-                    v-for="id in toolIds"
-                    :key="id"
+                    v-else
                     variant="ghost"
                     tone="neutral"
                     :icon="cmd.icon(id)"
@@ -36,6 +62,7 @@ const toolIds = computed(() => ['tool.select', ...editor.registry.all().filter((
                     :shortcut="cmd.shortcutLabel(id)"
                     @click="cmd.run(id)"
                 />
+                </template>
                 <TaoButton
                     v-if="coarse"
                     variant="ghost"

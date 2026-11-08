@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, type CSSProperties, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { TaoButton, TaoSegmented, TaoSegmentedOption, TaoToolbar, TaoToolbarGroup, TaoToolbarSeparator } from '@1337exp/taoui';
+import { TaoButton, TaoPopover, TaoSegmented, TaoSegmentedOption, TaoToolbar, TaoToolbarGroup, TaoToolbarSeparator } from '@1337exp/taoui';
 import { worldToScreen } from '@1337exp/taoux/camera';
 import { coarse } from '@1337exp/taoux/touch';
 import { selectionBounds } from '@/core/bounds';
@@ -9,7 +9,9 @@ import type { Arrow } from '@/core/types';
 import { useI18n, type MessageKey } from '@/i18n';
 import { ALIGN_COMMANDS, useCommands } from '../commands';
 import { floatingPosition } from '../floating';
+import { rememberEmoji } from '@/nodes/emoji';
 import { useEditor } from '../store';
+import EmojiPicker from './EmojiPicker.vue';
 
 /**
  * Панель действий над выделенным: цвет, выравнивание, вид связи, удаление. Действие применяется ко всем выделенным.
@@ -32,6 +34,23 @@ const nodeCount = computed(() => editor.selection.size);
 const hasSelection = computed(() => nodeCount.value > 0 || link.value !== null);
 const canColor = computed(() => editor.colorable.length > 0);
 const arrow = computed<Arrow>(() => link.value?.arrow ?? 'none');
+
+/** Выделены одни стикеры: в панели кнопка замены эмодзи (показывает текущий, если он у всех один). */
+const stickers = computed(() => {
+    const nodes = [...editor.selection].map((id) => editor.workspace.nodes[id]).filter((n) => n !== undefined);
+    return nodes.length > 0 && nodes.every((n) => n.type === 'emoji') ? nodes : [];
+});
+const stickerEmoji = computed(() => {
+    const set = new Set(stickers.value.map((n) => n.data.emoji));
+    return set.size === 1 ? String([...set][0]) : undefined;
+});
+const emojiOpen = ref(false);
+
+function changeEmoji(emoji: string) {
+    rememberEmoji(emoji);
+    for (const n of stickers.value) editor.patchData(n.id, { emoji });
+    emojiOpen.value = false;
+}
 
 const bar = ref<HTMLElement | null>(null);
 
@@ -126,6 +145,18 @@ function setArrow(value: unknown) {
                 </div>
             </TaoToolbarGroup>
 
+            <template v-if="stickers.length">
+                <TaoToolbarSeparator v-if="canColor" />
+                <TaoToolbarGroup :label="t('emoji.change')">
+                    <TaoPopover placement="top" v-model="emojiOpen">
+                        <template #trigger>
+                            <TaoButton variant="ghost" tone="neutral" :aria-label="t('emoji.change')" :title="t('emoji.change')">{{ stickerEmoji ?? '🙂' }}</TaoButton>
+                        </template>
+                        <EmojiPicker :current="stickerEmoji" @pick="changeEmoji" />
+                    </TaoPopover>
+                </TaoToolbarGroup>
+            </template>
+
             <template v-if="editor.nodeActions.length">
                 <TaoToolbarSeparator v-if="canColor" />
                 <TaoToolbarGroup :label="t('context.nodeActions')">
@@ -186,7 +217,7 @@ function setArrow(value: unknown) {
             </template>
 
             <!-- Разделитель нужен, только если слева от «Удалить» что-то есть (у точки на связи там пусто). -->
-            <TaoToolbarSeparator v-if="canColor || editor.nodeActions.length || nodeCount > 1 || link" />
+            <TaoToolbarSeparator v-if="canColor || editor.nodeActions.length || stickers.length || nodeCount > 1 || link" />
             <TaoToolbarGroup>
                 <TaoButton variant="ghost" tone="danger" :icon="cmd.icon('edit.delete')" :aria-label="cmd.label('edit.delete')" :shortcut="cmd.shortcutLabel('edit.delete')" @click="cmd.run('edit.delete')" />
             </TaoToolbarGroup>

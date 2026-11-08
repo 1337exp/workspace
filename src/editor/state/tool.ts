@@ -1,6 +1,6 @@
 import { ref, computed, type Ref } from 'vue';
 import type { Registry } from '@/core/registry';
-import type { Workspace } from '@/core/types';
+import type { NodeData, Workspace } from '@/core/types';
 import { addNode } from '@/core/workspace';
 import { GRID } from '@1337exp/taoux/snap';
 import type { PlaceSlice } from './place';
@@ -28,11 +28,14 @@ interface Deps {
  */
 export function useTool({ workspace, registry, selection, place, snapEnabled, editingNode }: Deps) {
     const tool = ref<ToolId>(SELECT_TOOL);
+    /** Данные для ноды, которую поставит следующий клик (выбранный эмодзи); без них берутся данные по умолчанию. */
+    const placeData = ref<NodeData | null>(null);
     /** Включён инструмент «поставить». / A "place" tool is armed. */
     const placing = computed(() => tool.value !== SELECT_TOOL && registry.find(tool.value) !== undefined);
 
-    function setTool(id: ToolId) {
+    function setTool(id: ToolId, data?: NodeData) {
         tool.value = id === SELECT_TOOL || registry.find(id) ? id : SELECT_TOOL;
+        placeData.value = tool.value === SELECT_TOOL ? null : (data ?? null);
         if (tool.value !== SELECT_TOOL) place.closePalette();
     }
 
@@ -44,7 +47,8 @@ export function useTool({ workspace, registry, selection, place, snapEnabled, ed
         if (!placing.value) return null;
         const def = registry.get(tool.value);
         const fit = (v: number) => (snapEnabled.value ? Math.round(v / GRID) * GRID : Math.round(v));
-        const node = addNode(workspace.value, registry, def.id, { x: fit(world[0] - def.size.w / 2), y: fit(world[1] - def.size.h / 2) });
+        const node = addNode(workspace.value, registry, def.id, { x: fit(world[0] - def.size.w / 2), y: fit(world[1] - def.size.h / 2), ...(placeData.value ? { data: placeData.value } : {}) });
+        placeData.value = null;
         selection.selectOnly(node.id);
         // Текст и ему подобные сразу ждут ввода.
         if (def.inlineEdit) editingNode.value = node.id;
@@ -57,12 +61,14 @@ export function useTool({ workspace, registry, selection, place, snapEnabled, ed
      * Esc: first drops the tool, then closes the palette, then clears the selection.
      */
     function cancel() {
-        if (tool.value !== SELECT_TOOL) tool.value = SELECT_TOOL;
-        else if (place.palette.value) place.closePalette();
+        if (tool.value !== SELECT_TOOL) {
+            tool.value = SELECT_TOOL;
+            placeData.value = null;
+        } else if (place.palette.value) place.closePalette();
         else selection.clearSelection();
     }
 
-    return { tool, placing, setTool, placeAt, cancel };
+    return { tool, placeData, placing, setTool, placeAt, cancel };
 }
 
 export type ToolSlice = ReturnType<typeof useTool>;

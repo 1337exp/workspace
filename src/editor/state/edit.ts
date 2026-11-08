@@ -56,11 +56,12 @@ export function useEdit({ workspace, registry, selection: sel, defaultArrow, vie
         selection.clear();
     }
 
-    /** Выделенные ноды, которые можно красить (точки на связи нет: у них нет рамки и полосы). */
+    /** Выделенные ноды, которые можно красить (нет у точек на связи и у нод с `colorable: false`, например стикеров). */
     const colorable = computed(() =>
         [...selection].filter((id) => {
             const node = workspace.value.nodes[id];
-            return node !== undefined && !registry.find(node.type)?.point;
+            const def = node && registry.find(node.type);
+            return node !== undefined && !def?.point && def?.colorable !== false;
         }),
     );
 

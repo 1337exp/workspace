@@ -20,7 +20,7 @@ describe('workspace', () => {
     }
 
     it('реестр подхватывает ноды из папок nodes/', () => {
-        expect(registry.all().map((d) => d.id).sort()).toEqual(['checklist', 'group', 'image', 'link', 'note', 'reroute', 'text']);
+        expect(registry.all().map((d) => d.id).sort()).toEqual(['checklist', 'emoji', 'group', 'image', 'link', 'note', 'reroute', 'text']);
     });
 
     it('новая нода получает размер и данные из определения', () => {
@@ -377,6 +377,6 @@ describe('порядок нод в панели', () => {
             .all()
             .filter((d) => !d.point)
             .map((d) => d.id);
-        expect(dock).toEqual(['note', 'text', 'checklist', 'group', 'image', 'link']);
+        expect(dock).toEqual(['note', 'text', 'checklist', 'group', 'emoji', 'image', 'link']);
     });
 });

@@ -30,6 +30,7 @@ npm run screenshot  # docs/media/*.png for the README, needs Chrome or Edge
 | Text | `T` | text right on the canvas, no frame; click and type at once; a double click edits; the height follows the content, an emptied text disappears; the colour from the bar tints the letters |
 | Checklist | `L` | items with a tick: `Enter` adds an item below, `Backspace` in an empty one removes it, `↑` `↓` walk the items, an item is dragged by the handle on the left (and from the keyboard: on the handle `Space` lifts, arrows move, `Space` drops, `Esc` cancels), pasting multi-line text spreads it over items (`-`, `*`, `•` and `[ ]` / `[x]` are understood); a counter and a progress line at the bottom; "Hide completed" in the bar over the node |
 | Group | `G` | a frame under the rest: nodes wholly inside it travel with it when you drag it by its strip |
+| Emoji | `E` | a sticker: one emoji over the whole node, its size grows with the node; the button in the left dock opens a grid of 54 emoji, the picked one is placed by the next click, `E` places the last picked; the bar over a picked sticker has a button to change it; it lies over the other nodes and links; no colour |
 | Image | `I` | an image by its link |
 | Link | `K` | a card: the host big, the address small, a button opens it in a new tab; `example.com` becomes `https://example.com`; only `http` and `https` open; we do not fetch the page (no title, no icon), so that addresses are not sent to third-party services |
 
@@ -99,7 +100,9 @@ The rest of the definition is optional:
 
 - `titleKey`: the data field with the title in the strip (edited with a double click);
 - `container`: a group node, lies under the rest and carries what is inside;
-- `bare`: no frame and no strip (text);
+- `bare`: no frame and no strip (text, sticker);
+- `order`: the place in the left dock, the palette and the help (numbers with gaps: 10, 20, …);
+- `overlay`: drawn over the other nodes and links (a sticker); `colorable: false`: cannot be coloured;
 - `inlineEdit` and `isEmpty`: editing in place and removing an empty node after it; the component gets `editing` and reports `edit-end` and `fit` (the height it needs);
 - `actions`: toggles of the node type in the bar over the selection (`get` / `set` over the data; the label in the dictionary `nodes.<type>.action.<id>`);
 - `version` and `migrate(data, from)`: node data is user content, so when the format changes, raise the version and old saves arrive on their own.

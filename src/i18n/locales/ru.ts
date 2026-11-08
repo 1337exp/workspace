@@ -102,6 +102,11 @@ export default {
         hint: 'Линии и притяжение к краям и центрам других нод. Удерживай Alt, чтобы отключить на время',
     },
 
+    emoji: {
+        pick: 'Выбрать эмодзи',
+        change: 'Заменить эмодзи',
+    },
+
     tool: {
         dock: 'Инструменты',
         select: 'Выбор',
@@ -164,6 +169,7 @@ export default {
             text: { title: 'Текст' },
             checklist: { title: 'Чеклист' },
             link: { title: 'Ссылка' },
+            emoji: { title: 'Эмодзи' },
             image: { title: 'Картинка' },
             group: { title: 'Группа' },
             reroute: { title: 'Точка' },

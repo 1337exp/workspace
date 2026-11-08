@@ -21,7 +21,10 @@ const containers = computed(() =>
         .filter((n) => isContainer(n.type))
         .sort((a, b) => b.w * b.h - a.w * a.h),
 );
-const plainNodes = computed(() => Object.values(editor.workspace.nodes).filter((n) => !isContainer(n.type)));
+const isOverlay = (type: string) => !!editor.registry.find(type)?.overlay;
+const plainNodes = computed(() => Object.values(editor.workspace.nodes).filter((n) => !isContainer(n.type) && !isOverlay(n.type)));
+// Стикеры лежат над остальными нодами и связями.
+const overlayNodes = computed(() => Object.values(editor.workspace.nodes).filter((n) => isOverlay(n.type)));
 </script>
 
 <template>
@@ -30,6 +33,7 @@ const plainNodes = computed(() => Object.values(editor.workspace.nodes).filter((
         <ConnectionsLayer />
         <LabelsLayer />
         <NodeView v-for="node in plainNodes" :key="node.id" :node="node" :selected="editor.selection.has(node.id)" />
+        <NodeView v-for="node in overlayNodes" :key="node.id" :node="node" :selected="editor.selection.has(node.id)" />
         <GuidesLayer />
     </TaoxCanvas>
 </template>
