@@ -114,7 +114,7 @@ export default defineNode({
 ```
 src/
   core/     чистая модель без Vue: типы, реестр, операции над пространством, границы, выравнивание, сохранение и чтение
-  nodes/    определения нод (note, text, checklist, link, image, group, reroute)
+  nodes/    определения нод (note, text, checklist, link, image, emoji, group, reroute)
   editor/   интерфейс редактора
   i18n/     переводы (ru, en)
   icons.ts  наши иконки рядом со встроенными tao-* из TaoUI

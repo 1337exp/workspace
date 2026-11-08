@@ -114,7 +114,7 @@ A node of an unknown type does not break loading: it is drawn as a stub and its 
 ```
 src/
   core/     the pure model without Vue: types, registry, workspace operations, bounds, alignment, saving and reading
-  nodes/    node definitions (note, text, checklist, link, image, group, reroute)
+  nodes/    node definitions (note, text, checklist, link, image, emoji, group, reroute)
   editor/   the editor interface
   i18n/     translations (ru, en)
   icons.ts  our icons next to TaoUI's built-in tao-*
