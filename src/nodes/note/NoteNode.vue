@@ -42,6 +42,9 @@ const maxFit = ref(FONT_MAX);
 
 const manual = computed(() => (props.data.size && props.data.size > 0 ? props.data.size : 0));
 const px = computed(() => manual.value || fitted.value);
+/** Размер, с которым рисуется подсказка пустого стикера (не огромный, как заданный размер). */
+const HINT_SIZE = 22;
+const drawn = computed(() => (props.data.text || props.editing ? px.value : HINT_SIZE));
 const align = computed(() => props.data.align ?? 'center');
 const valign = computed(() => props.data.valign ?? 'middle');
 /** Что показывает зеркало: текст (с невидимым знаком в конце, чтобы последний перенос строки считался) или подсказка. */
@@ -65,9 +68,9 @@ function refit() {
         maxFit.value = fitFontSize(heightAt, logical.value.h - PAD * 2, FONT_MIN, FONT_INPUT_MAX);
         fitted.value = Math.min(maxFit.value, FONT_MAX);
     } else {
-        // Пустой стикер показывает подсказку обычным размером, а не огромным.
-        maxFit.value = FONT_MAX;
-        fitted.value = 22;
+        // Пустой стикер: ограничивать нечем (любой размер подойдёт будущему тексту), подсказка рисуется обычным размером.
+        maxFit.value = FONT_INPUT_MAX;
+        fitted.value = HINT_SIZE;
     }
     view.value?.style.removeProperty('font-size'); // дальше размер ведёт шаблон
     // Заданный размер, который перестал влезать, уступает «Авто».
@@ -125,7 +128,7 @@ function onInput(e: Event) {
         <div
             class="sticker"
             :class="[`a-${align}`, `v-${valign}`, { bold: data.bold }]"
-            :style="{ '--px': `${px}px`, '--pad': `${PAD}px`, width: `${logical.w}px`, height: `${logical.h}px`, transform: `scale(${scale})` }"
+            :style="{ '--px': `${drawn}px`, '--pad': `${PAD}px`, width: `${logical.w}px`, height: `${logical.h}px`, transform: `scale(${scale})` }"
         >
             <div class="slot">
                 <!-- Зеркало: по нему считается размер; без правки оно же и показывает текст, его таскают за любое место. -->
