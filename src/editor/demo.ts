@@ -16,7 +16,7 @@ export function createDemo(registry: Registry) {
         id: 'hello',
         x: 40,
         y: 40,
-        data: { text: 'Привет! Это заметка.\n\nТяни за полоску сверху, чтобы двигать. Правый клик по пустому месту — добавить ноду.' },
+        data: { text: 'Привет! Это стикер.\n\nТяни за любое место, чтобы двигать. Правый клик по пустому месту — добавить ноду.' },
     });
     addNode(ws, registry, 'image', { id: 'pic', x: 400, y: 20, data: { url: svg('#4f8cff', 'Картинка по ссылке') } });
     addNode(ws, registry, 'note', {
