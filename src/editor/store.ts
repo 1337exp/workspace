@@ -174,6 +174,7 @@ export const useEditor = defineStore('editor', () => {
         // настройки
         snapEnabled: prefs.snapEnabled,
         guidesEnabled: prefs.guidesEnabled,
+        background: prefs.background,
         guides: drag.guides,
         theme: prefs.theme,
         defaultArrow: prefs.defaultArrow,

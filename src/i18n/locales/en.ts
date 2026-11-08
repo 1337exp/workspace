@@ -124,6 +124,8 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
     app: {
         menu: 'Menu',
         theme: 'Theme',
+        background: 'Background',
+        bg: { grid: 'Grid', dots: 'Dots', none: 'None' },
         dark: 'Dark',
         light: 'Light',
         help: 'Help',

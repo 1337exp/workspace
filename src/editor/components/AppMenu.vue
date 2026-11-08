@@ -20,6 +20,7 @@ const items = useMenu([
     'file.save',
     '-',
     { id: 'theme', label: () => t('app.theme'), items: ['app.theme.dark', 'app.theme.light'] },
+    { id: 'background', label: () => t('app.background'), items: ['app.bg.grid', 'app.bg.dots', 'app.bg.none'] },
     { id: 'language', label: () => t('ui.language'), items: ['app.lang.ru', 'app.lang.en'] },
 ]);
 </script>

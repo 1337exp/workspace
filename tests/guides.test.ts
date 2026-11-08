@@ -101,3 +101,41 @@ describe('умные направляющие при перетаскивани�
         expect(commands.get('view.guides')!.checked!()).toBe(false);
     });
 });
+
+describe('фон холста', () => {
+    beforeEach(() => {
+        localStorage.clear();
+        setActivePinia(createPinia());
+    });
+
+    it('по умолчанию сетка; команды переключают фон, он запоминается, неверное сохранённое значение игнорируется', () => {
+        const editor = useEditor();
+        const { commands } = createEditorCommands(editor);
+        expect(editor.background).toBe('grid');
+        expect(commands.get('app.bg.grid')!.checked!()).toBe(true);
+
+        commands.run('app.bg.dots');
+        expect(editor.background).toBe('dots');
+        expect(commands.get('app.bg.dots')!.checked!()).toBe(true);
+        expect(commands.get('app.bg.grid')!.checked!()).toBe(false);
+
+        commands.run('app.bg.none');
+        expect(editor.background).toBe('none');
+    });
+
+    it('сохранённый фон читается при старте, мусор заменяется сеткой', async () => {
+        localStorage.setItem('workspace.prefs', JSON.stringify({ background: 'dots' }));
+        setActivePinia(createPinia());
+        expect(useEditor().background).toBe('dots');
+
+        localStorage.setItem('workspace.prefs', JSON.stringify({ background: 'plaid' }));
+        setActivePinia(createPinia());
+        expect(useEditor().background).toBe('grid');
+    });
+
+    it('привязка к сетке не зависит от вида фона', () => {
+        const editor = useEditor();
+        editor.background = 'none';
+        expect(editor.snapEnabled).toBe(true);
+    });
+});

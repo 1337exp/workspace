@@ -25,7 +25,7 @@ const plainNodes = computed(() => Object.values(editor.workspace.nodes).filter((
 </script>
 
 <template>
-    <TaoxCanvas :class="{ placing: editor.placing }" :host="host" :options="workspaceCanvasOptions">
+    <TaoxCanvas :class="{ placing: editor.placing }" :host="host" :options="workspaceCanvasOptions" :background="editor.background">
         <NodeView v-for="node in containers" :key="node.id" :node="node" :selected="editor.selection.has(node.id)" />
         <ConnectionsLayer />
         <LabelsLayer />

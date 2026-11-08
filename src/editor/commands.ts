@@ -7,6 +7,7 @@ import type { AlignKind } from '@/core/align';
 import { clipboardActions } from './clipboard';
 import { openFromFile, saveToFile } from './file';
 import { ZOOM_STEP } from './state/view';
+import { BACKGROUNDS, type Background } from './state/prefs';
 import { SELECT_TOOL } from './state/tool';
 import { useEditor } from './store';
 
@@ -107,6 +108,16 @@ export function createEditorCommands(editor: Editor) {
         { id: 'view.fit', label: () => t('view.fit'), icon: 'view-fit', shortcut: 'Shift+1', run: () => editor.fitAll() },
 
         { id: 'touch.select', label: () => t('touch.select'), icon: 'touch-select', checked: () => editor.selectMode, run: () => (editor.selectMode = !editor.selectMode) },
+
+        ...BACKGROUNDS.map(
+            (kind: Background): Command => ({
+                id: `app.bg.${kind}`,
+                label: () => t(`app.bg.${kind}` as MessageKey),
+                group: 'background',
+                checked: () => editor.background === kind,
+                run: () => (editor.background = kind),
+            }),
+        ),
 
         { id: 'app.theme.dark', label: () => t('app.dark'), icon: 'tao-moon', group: 'theme', checked: () => editor.theme === 'dark', run: () => (editor.theme = 'dark') },
         { id: 'app.theme.light', label: () => t('app.light'), icon: 'tao-sun', group: 'theme', checked: () => editor.theme === 'light', run: () => (editor.theme = 'light') },

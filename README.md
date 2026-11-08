@@ -63,7 +63,7 @@ The title in the strip (of a note, group, checklist, link) is edited with a doub
 - **Left:** "Select", a tool for every node type, undo and redo.
 - **Over the selection** (pinned at the bottom on touch and on a narrow screen): colour (6 colours and "no colour"; it tints the frame and the strip, the fill of a group, the letters of a text), the properties of the node type ("Hide completed" for a checklist, "Large text" for a text), alignment by edges and centres, distribution with equal gaps (three or more nodes), for a link its style, "Reverse" and "Straighten", "Delete". It acts on everything selected.
 - **Bottom right:** zoom, the view menu ("Zoom to fit", 100%, grid) and the help "?" with a list of gestures and keys.
-- **Top left:** the ☰ menu (file: "New", "Open" `Ctrl+O`, "Save" `Ctrl+S`; light or dark theme; language) and a quick theme switch.
+- **Top left:** the ☰ menu (file: "New", "Open" `Ctrl+O`, "Save" `Ctrl+S`; light or dark theme; the canvas background: grid, dots or none; language) and a quick theme switch.
 
 **Context menu** (a right click on a node, a link or an empty place): for a node "Copy" `Ctrl+C`, "Cut" `Ctrl+X`, "Duplicate" `Ctrl+D` (with what lies inside a group and the links between the copies; the copies get selected), "Bring to front" `]`, "Send to back" `[`, the toggles of the node type, colour, alignment (two or more nodes), "Delete"; for a link its style, "Reverse", "Straighten"; for an empty place "Paste" `Ctrl+V` (what is pasted is centred on the click), "Select all" `Ctrl+A`, "Add node…" (the palette), "Zoom to fit". A node outside the selection becomes the selection on a right click, a node inside it keeps it, and the menu acts on everything selected. A right button that was dragged pans as before.
 
@@ -73,7 +73,7 @@ Other keys: `Delete` removes the selection, `Ctrl+Z` / `Ctrl+Y` undo and redo, `
 
 **Touch (a tablet).** A finger moves the canvas, two fingers move and zoom, a long press on an empty place opens the palette and on a node or a link the context menu, a double tap works as a double click, the "Select" mode in the left dock stands in for `Ctrl`. A pen counts as a mouse. Details and a checklist for testing: [docs/touch.md](docs/touch.md) (in Russian). `?debug=touch` in the address shows the recognised gestures.
 
-**Saving.** The workspace is saved automatically to `localStorage`; "Save" and "Open" work with a `workspace.json` file. The theme and grid snapping are remembered in the browser and are not written to the file.
+**Saving.** The workspace is saved automatically to `localStorage`; "Save" and "Open" work with a `workspace.json` file. The theme, the background and grid snapping are remembered in the browser and are not written to the file.
 
 The interface is in English and Russian, light and dark theme.
 

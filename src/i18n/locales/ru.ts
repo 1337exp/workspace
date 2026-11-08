@@ -121,6 +121,8 @@ export default {
     app: {
         menu: 'Меню',
         theme: 'Тема',
+        background: 'Фон',
+        bg: { grid: 'Сетка', dots: 'Точки', none: 'Без фона' },
         dark: 'Тёмная',
         light: 'Светлая',
         help: 'Справка',

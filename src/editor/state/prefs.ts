@@ -11,9 +11,14 @@ import type { Arrow } from '@/core/types';
  */
 const prefsStorage = createSavedStorage('workspace.prefs');
 
+/** Фон холста: сетка, точки или ничего. Только вид: привязка к сетке это отдельная настройка. */
+export type Background = 'grid' | 'dots' | 'none';
+export const BACKGROUNDS: readonly Background[] = ['grid', 'dots', 'none'];
+
 interface Saved {
     snap?: boolean;
     guides?: boolean;
+    background?: Background;
     theme?: TaoMode;
 }
 
@@ -35,12 +40,13 @@ export function usePrefs() {
     const snapEnabled = ref(saved.snap !== false);
     /** Умные направляющие при перетаскивании: линии и притяжение к краям и центрам других нод. */
     const guidesEnabled = ref(saved.guides !== false);
+    const background = ref<Background>(BACKGROUNDS.includes(saved.background as Background) ? (saved.background as Background) : 'grid');
     const theme = ref<TaoMode>(saved.theme === 'light' || saved.theme === 'dark' ? saved.theme : systemTheme());
 
     // Тема применяется к <html> сразу и при каждой смене.
     watch(theme, (mode) => applyTaoMode(document.documentElement, mode), { immediate: true });
-    watch([snapEnabled, guidesEnabled, theme], () =>
-        prefsStorage.write(JSON.stringify({ snap: snapEnabled.value, guides: guidesEnabled.value, theme: theme.value } satisfies Saved)),
+    watch([snapEnabled, guidesEnabled, background, theme], () =>
+        prefsStorage.write(JSON.stringify({ snap: snapEnabled.value, guides: guidesEnabled.value, background: background.value, theme: theme.value } satisfies Saved)),
     );
 
     /** Вид новых связей. Пока выбрана связь, переключатель меняет её, а не это значение. */
@@ -49,7 +55,7 @@ export function usePrefs() {
     /** Сенсорный режим «Выделение»: один палец рисует рамку, тап по ноде добавляет или снимает её (роль Ctrl+клика). */
     const selectMode = ref(false);
 
-    return { snapEnabled, guidesEnabled, theme, defaultArrow, selectMode };
+    return { snapEnabled, guidesEnabled, background, theme, defaultArrow, selectMode };
 }
 
 export type PrefsSlice = ReturnType<typeof usePrefs>;
