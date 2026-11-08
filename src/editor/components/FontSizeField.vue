@@ -71,7 +71,7 @@ function pick(size: number | null) {
 }
 
 .size-input {
-    width: 104px;
+    width: 80px;
 }
 
 .menu {
