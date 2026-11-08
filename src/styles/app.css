@@ -20,3 +20,8 @@ body {
     color: var(--tao-color-text);
     font-family: var(--tao-font-family);
 }
+
+/* Светлая тема: холст теплее и спокойнее белого, глазам легче. */
+:root[data-tao-mode='light'] {
+    --tx-canvas-bg: #f6f5f8;
+}
