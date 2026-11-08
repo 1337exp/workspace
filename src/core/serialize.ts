@@ -1,11 +1,11 @@
 import { dataVersionOf } from './define';
 import type { Registry } from './registry';
 import type { Anchor, Arrow, Connection, NodeData, NodeInstance, Workspace } from './types';
-import { SIDES, cleanLabel } from './workspace';
+import { SIDES, adoptByGeometry, cleanLabel } from './workspace';
 
 export const FORMAT = 'workspace';
 /** Версия формата файла (не путать с версиями данных нод). */
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 
 export interface SavedView {
     x: number;
@@ -57,7 +57,7 @@ function upgrade(node: NodeInstance, registry: Registry): void {
 
 function readNode(raw: unknown, registry: Registry): NodeInstance | string {
     if (!isObject(raw)) return 'node';
-    const { id, type, x, y, w, h, dataVersion, data, color } = raw;
+    const { id, type, x, y, w, h, dataVersion, data, color, parent } = raw;
     if (typeof id !== 'string' || id === '') return 'node.id';
     if (typeof type !== 'string') return `${id}.type`;
     if (!isNum(x) || !isNum(y) || !isNum(w) || !isNum(h) || w <= 0 || h <= 0) return `${id}.geometry`;
@@ -73,6 +73,7 @@ function readNode(raw: unknown, registry: Registry): NodeInstance | string {
         dataVersion: isNum(dataVersion) ? dataVersion : 1,
         data: data as NodeData,
         ...(typeof color === 'string' && color !== '' ? { color } : {}),
+        ...(typeof parent === 'string' && parent !== '' ? { parent } : {}),
     };
     upgrade(node, registry);
     return node;
@@ -106,6 +107,25 @@ export function parse(text: string, registry: Registry): ParseResult {
         if (node.id in workspace.nodes) return fail('invalidStructure', `${node.id}.duplicate`);
         workspace.nodes[node.id] = node;
     }
+
+    // Состав: контейнер должен существовать и быть контейнером, без циклов; иначе нода просто лежит на холсте.
+    for (const node of Object.values(workspace.nodes)) {
+        if (node.parent === undefined) continue;
+        const owner = workspace.nodes[node.parent];
+        if (!owner || owner.id === node.id || !registry.find(owner.type)?.container) delete node.parent;
+    }
+    for (const node of Object.values(workspace.nodes)) {
+        const chain = new Set<string>();
+        for (let n: NodeInstance | undefined = node; n?.parent !== undefined; n = workspace.nodes[n.parent]) {
+            if (chain.has(n.id)) {
+                delete n.parent;
+                break;
+            }
+            chain.add(n.id);
+        }
+    }
+    // Файл старого формата не знал явного состава: он задавался геометрией.
+    if (raw.version < 2) adoptByGeometry(workspace, registry);
 
     let dropped = 0;
     const seen = new Set<string>();

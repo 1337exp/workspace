@@ -81,7 +81,7 @@ function finishTitle(save: boolean) {
     <div
         v-else
         class="node"
-        :class="{ selected, unknown: !def, container: def?.container, tinted: tint, bare: def?.bare, sticker: def?.sticker }"
+        :class="{ selected, drop: editor.dropTarget === node.id, unknown: !def, container: def?.container, tinted: tint, bare: def?.bare, sticker: def?.sticker }"
         :data-node-id="node.id"
         :data-color="tint ?? undefined"
         :data-node-container="def?.container ? '' : undefined"
@@ -287,6 +287,12 @@ function finishTitle(save: boolean) {
     border: 1px dashed var(--tao-color-border-strong, #4b5563);
     background: color-mix(in srgb, var(--tao-color-text-strong, #fff) 3%, transparent);
     box-shadow: none;
+}
+
+/* В этот контейнер будет помещено перетаскиваемое: подсвечен, пока не отпустили. */
+.node.container.drop .frame {
+    border: 2px solid var(--tao-color-accent);
+    background: color-mix(in srgb, var(--tao-color-accent) 10%, transparent);
 }
 
 .node.container.selected .frame {

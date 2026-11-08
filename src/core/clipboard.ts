@@ -76,6 +76,15 @@ export function insertNodes(ws: Workspace, source: Workspace, dx: number, dy: nu
         created.push(copy);
     }
 
+    // Состав переносится, если контейнер вставлен вместе с нодой; иначе нода вставляется сама по себе.
+    for (const copy of created) {
+        const p = copy.parent;
+        if (p === undefined) continue;
+        const mapped = map.get(p);
+        if (mapped !== undefined) copy.parent = mapped;
+        else delete copy.parent;
+    }
+
     for (const c of source.connections) {
         const from = map.get(c.from.node);
         const to = map.get(c.to.node);

@@ -182,20 +182,23 @@ describe('группа (контейнер)', () => {
     function scene() {
         const ws = createWorkspace();
         addNode(ws, registry, 'group', { id: 'g', x: 0, y: 0, w: 500, h: 400 });
-        addNode(ws, registry, 'note', { id: 'in', x: 20, y: 20 }); // целиком внутри
-        addNode(ws, registry, 'note', { id: 'half', x: 400, y: 20 }); // выступает за край
+        addNode(ws, registry, 'note', { id: 'in', x: 20, y: 20, parent: 'g' }); // явно помещена в группу
+        addNode(ws, registry, 'note', { id: 'half', x: 400, y: 20 }); // выступает за край, не помещена
         addNode(ws, registry, 'note', { id: 'out', x: 900, y: 900 });
         return ws;
     }
 
-    it('вместе с группой едут только ноды, лежащие целиком внутри', () => {
+    it('вместе с группой едут только ноды, явно помещённые в неё; геометрия ничего не решает', () => {
         expect([...carriedBy(scene(), registry, ['g'])]).toEqual(['in']);
+        const ws = scene();
+        addNode(ws, registry, 'note', { id: 'lying', x: 30, y: 200 }); // лежит внутри, но не помещена
+        expect([...carriedBy(ws, registry, ['g'])]).toEqual(['in']);
     });
 
     it('вложенная группа тянет своё содержимое, а выбранные ноды не дублируются', () => {
         const ws = scene();
-        addNode(ws, registry, 'group', { id: 'g2', x: 10, y: 150, w: 300, h: 200 });
-        addNode(ws, registry, 'note', { id: 'deep', x: 20, y: 200, w: 120, h: 80 });
+        addNode(ws, registry, 'group', { id: 'g2', x: 10, y: 150, w: 300, h: 200, parent: 'g' });
+        addNode(ws, registry, 'note', { id: 'deep', x: 20, y: 200, w: 120, h: 80, parent: 'g2' });
 
         expect([...carriedBy(ws, registry, ['g'])].sort()).toEqual(['deep', 'g2', 'in']);
         expect([...carriedBy(ws, registry, ['g', 'in'])].sort()).toEqual(['deep', 'g2']);

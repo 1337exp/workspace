@@ -25,6 +25,7 @@ export function addNode(
         dataVersion: dataVersionOf(def),
         data: { ...def.create(), ...init.data },
         ...(init.color ? { color: init.color } : {}),
+        ...(init.parent ? { parent: init.parent } : {}),
     };
     if (ws.nodes[node.id]) throw new Error(`Нода с id "${node.id}" уже есть`);
 
@@ -33,6 +34,13 @@ export function addNode(
 }
 
 export function removeNode(ws: Workspace, nodeId: string): void {
+    const removed = ws.nodes[nodeId];
+    // Содержимое удалённого контейнера переходит к его контейнеру (или остаётся на холсте).
+    for (const n of Object.values(ws.nodes)) {
+        if (n.parent !== nodeId) continue;
+        if (removed?.parent !== undefined) n.parent = removed.parent;
+        else delete n.parent;
+    }
     delete ws.nodes[nodeId];
     ws.connections = ws.connections.filter((c) => c.from.node !== nodeId && c.to.node !== nodeId);
 }
@@ -106,28 +114,81 @@ export function reverseConnection(ws: Workspace, connectionId: string): void {
 }
 
 /**
- * Ноды, которые едут вместе с выбранными контейнерами: лежат целиком внутри контейнера (и контейнеров внутри него).
- * Сами выбранные ноды в результат не входят: их двигают и так.
+ * Ноды, которые едут вместе с выбранными контейнерами: те, что в них явно помещены (`parent`), и вложенные контейнеры
+ * с их содержимым. Сами выбранные ноды в результат не входят: их двигают и так. Геометрия ничего не решает: контейнер,
+ * который просто проехал над нодой, её не захватывает.
+ * The nodes that travel with the picked containers: those explicitly put into them (`parent`), and nested containers with
+ * their contents. The picked nodes themselves are not included: they move anyway. Geometry decides nothing: a container
+ * that merely passed over a node does not capture it.
  */
-export function carriedBy(ws: Workspace, registry: Registry, selected: Iterable<string>): Set<string> {
+export function carriedBy(ws: Workspace, _registry: Registry, selected: Iterable<string>): Set<string> {
     const picked = new Set(selected);
     const carried = new Set<string>();
     const queue = [...picked];
 
     for (let id = queue.pop(); id !== undefined; id = queue.pop()) {
-        const box = ws.nodes[id];
-        if (!box || !registry.find(box.type)?.container) continue;
-
         for (const n of Object.values(ws.nodes)) {
-            if (n.id === id || picked.has(n.id) || carried.has(n.id)) continue;
-            const inside = n.x >= box.x && n.y >= box.y && n.x + n.w <= box.x + box.w && n.y + n.h <= box.y + box.h;
-            if (inside) {
-                carried.add(n.id);
-                queue.push(n.id); // вложенный контейнер тянет своё содержимое
-            }
+            if (n.parent !== id || picked.has(n.id) || carried.has(n.id)) continue;
+            carried.add(n.id);
+            queue.push(n.id); // вложенный контейнер тянет своё содержимое
         }
     }
     return carried;
+}
+
+/**
+ * Контейнер, в который попадёт перетаскиваемое: самый вложенный (с наименьшей площадью) из тех, что содержат точку
+ * `point`. Сами перетаскиваемые ноды и их содержимое в счёт не идут (контейнер нельзя поместить в себя).
+ * The container the dragged nodes would land in: the innermost (smallest area) of those that contain `point`. The dragged
+ * nodes themselves and what they carry do not count (a container cannot be put into itself).
+ */
+export function containerAt(ws: Workspace, registry: Registry, moving: Iterable<string>, point: readonly [number, number]): string | null {
+    const skip = new Set(moving);
+    for (const id of carriedBy(ws, registry, skip)) skip.add(id);
+
+    let best: NodeInstance | null = null;
+    for (const n of Object.values(ws.nodes)) {
+        if (skip.has(n.id) || !registry.find(n.type)?.container) continue;
+        if (point[0] < n.x || point[0] > n.x + n.w || point[1] < n.y || point[1] > n.y + n.h) continue;
+        if (!best || n.w * n.h < best.w * best.h) best = n;
+    }
+    return best ? best.id : null;
+}
+
+/** Кладёт ноды в контейнер (`null`: выводит из любого). Контейнер в себя и в своё содержимое не кладётся. */
+export function setParent(ws: Workspace, registry: Registry, ids: Iterable<string>, parent: string | null): void {
+    const picked = [...ids];
+    if (parent !== null) {
+        const bad = new Set(picked);
+        for (const id of carriedBy(ws, registry, picked)) bad.add(id);
+        if (bad.has(parent) || !ws.nodes[parent]) return;
+    }
+    for (const id of picked) {
+        const n = ws.nodes[id];
+        if (!n) continue;
+        if (parent === null) delete n.parent;
+        else n.parent = parent;
+    }
+}
+
+/**
+ * Для документов, записанных до явного состава: каждая нода, целиком лежащая внутри контейнера, кладётся в самый
+ * вложенный такой контейнер (так группы выглядели и работали раньше).
+ * For documents saved before explicit membership: every node wholly inside a container goes into the innermost such one.
+ */
+export function adoptByGeometry(ws: Workspace, registry: Registry): void {
+    const boxes = Object.values(ws.nodes).filter((n) => registry.find(n.type)?.container);
+    for (const n of Object.values(ws.nodes)) {
+        if (n.parent !== undefined) continue;
+        let best: NodeInstance | null = null;
+        for (const b of boxes) {
+            if (b.id === n.id) continue;
+            const inside = n.x >= b.x && n.y >= b.y && n.x + n.w <= b.x + b.w && n.y + n.h <= b.y + b.h;
+            // Равные по размеру контейнеры друг друга не поглощают: иначе получился бы цикл.
+            if (inside && (n.w < b.w || n.h < b.h || !registry.find(n.type)?.container) && (!best || b.w * b.h < best.w * best.h)) best = b;
+        }
+        if (best) n.parent = best.id;
+    }
 }
 
 export const SIDES: readonly Side[] = ['left', 'right', 'top', 'bottom'];
@@ -342,6 +403,12 @@ export function duplicateNodes(ws: Workspace, registry: Registry, ids: Iterable<
         };
         ws.nodes[copy.id] = copy;
         map.set(id, copy.id);
+    }
+
+    // Копия лежит в копии контейнера, если его тоже копировали, иначе в том же контейнере, что и оригинал.
+    for (const [from, to] of map) {
+        const p = ws.nodes[from]!.parent;
+        if (p !== undefined && map.has(p)) ws.nodes[to]!.parent = map.get(p)!;
     }
 
     for (const c of [...ws.connections]) {

@@ -116,6 +116,13 @@ export interface NodeInstance {
     data: NodeData;
     /** Цвет ноды (имя из `NODE_COLORS`). Не задан — обычный. Неизвестное имя сохраняется как есть, но не рисуется. */
     color?: string;
+    /**
+     * Контейнер (группа, фрейм), в который нода явно помещена; у ноды он один. Состав задаётся не геометрией: нода попадает
+     * в контейнер, только когда её выбрали и перетащили в него, и выходит, когда выбрали и вытащили.
+     * The container (group, frame) the node was explicitly put into; a node has at most one. Membership is not geometric:
+     * a node enters a container only when it is picked and dragged into it, and leaves when picked and dragged out.
+     */
+    parent?: string;
 }
 
 export type Side = 'left' | 'right' | 'top' | 'bottom';

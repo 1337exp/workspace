@@ -197,6 +197,7 @@ export const useEditor = defineStore('editor', () => {
         redo: session.redo,
 
         // перетаскивание и размер (шаг истории ставит холст жестом `commit`)
+        dropTarget: drag.dropTarget,
         beginDrag: drag.beginDrag,
         endDrag: drag.endDrag,
         moveSelected: drag.moveSelected,

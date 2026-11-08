@@ -1,7 +1,7 @@
 import { ref, computed, type Ref } from 'vue';
 import type { Registry } from '@/core/registry';
 import type { NodeData, Workspace } from '@/core/types';
-import { addNode } from '@/core/workspace';
+import { addNode, containerAt, setParent } from '@/core/workspace';
 import { GRID } from '@1337exp/taoux/snap';
 import type { PlaceSlice } from './place';
 import type { SelectionSlice } from './selection';
@@ -59,6 +59,11 @@ export function useTool({ workspace, registry, selection, place, snapEnabled, ed
         });
         placeData.value = null;
         placeSize.value = null;
+        // Поставленное внутри контейнера становится его содержимым (кроме самих контейнеров: их кладут в другой перетаскиванием).
+        if (!def.container) {
+            const owner = containerAt(workspace.value, registry, [node.id], world);
+            if (owner) setParent(workspace.value, registry, [node.id], owner);
+        }
         selection.selectOnly(node.id);
         // Текст и ему подобные сразу ждут ввода.
         if (def.inlineEdit) editingNode.value = node.id;

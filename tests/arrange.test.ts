@@ -50,7 +50,7 @@ describe('duplicateNodes', () => {
     it('группа копируется вместе с тем, что лежит внутри, а возвращаются только выбранные', () => {
         const ws = createWorkspace();
         addNode(ws, registry, 'group', { id: 'g', x: 0, y: 0, w: 400, h: 300 });
-        addNode(ws, registry, 'note', { id: 'inside', x: 20, y: 40, w: 100, h: 80 });
+        addNode(ws, registry, 'note', { id: 'inside', x: 20, y: 40, w: 100, h: 80, parent: 'g' });
         addNode(ws, registry, 'note', { id: 'outside', x: 600, y: 0 });
 
         const copies = duplicateNodes(ws, registry, ['g']);

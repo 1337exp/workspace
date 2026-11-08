@@ -61,7 +61,7 @@ describe('alignNodes', () => {
     it('группа везёт за собой своё содержимое, а выделенное внутри двигается само', () => {
         const ws = createWorkspace();
         addNode(ws, registry, 'group', { id: 'g', x: 500, y: 0, w: 400, h: 300 });
-        addNode(ws, registry, 'note', { id: 'inside', x: 520, y: 40, w: 100, h: 60 }); // не выделена: едет вместе с группой
+        addNode(ws, registry, 'note', { id: 'inside', x: 520, y: 40, w: 100, h: 60, parent: 'g' }); // не выделена: едет вместе с группой
         addNode(ws, registry, 'note', { id: 'free', x: 100, y: 400, w: 100, h: 60 });
 
         alignNodes(ws, registry, ['g', 'free'], 'left'); // группа уходит к x = 100

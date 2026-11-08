@@ -120,7 +120,8 @@ describe('перетаскивание группы', () => {
         const editor = useEditor();
         editor.loadWorkspace({ nodes: {}, connections: [] }, undefined, true);
         const g = editor.addNodeAtCenter('group');
-        const n = editor.addNodeAtCenter('note'); // центр экрана: попадает внутрь группы
+        const n = editor.addNodeAtCenter('note'); // центр экрана: лежит внутри группы
+        n.parent = g.id; // и помещена в неё явно
         const before = { x: n.x, y: n.y };
 
         editor.setSelection([g.id]);

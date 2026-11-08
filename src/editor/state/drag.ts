@@ -1,7 +1,7 @@
 import { ref, type Ref } from 'vue';
 import type { Workspace } from '@/core/types';
 import type { Registry } from '@/core/registry';
-import { carriedBy, resizeRect, type Rect, type ResizeEdge } from '@/core/workspace';
+import { carriedBy, containerAt, resizeRect, setParent, type Rect, type ResizeEdge } from '@/core/workspace';
 import { GRID, SNAP_PX, snapThreshold, softSnap } from '@1337exp/taoux/snap';
 import { snapToGuides, type GuideLine, type GuideRect } from '@1337exp/taoux/guides';
 import type { SelectionSlice } from './selection';
@@ -27,6 +27,11 @@ export function useDrag({ workspace, registry, selection, view, snapEnabled, gui
     /** Направляющие, которые видны прямо сейчас (мировые координаты); пусто вне перетаскивания. */
     const guides = ref<GuideLine[]>([]);
     /**
+     * Контейнер, в который будет помещено перетаскиваемое, если отпустить сейчас (его подсвечивают); `null`, если никакой
+     * или перетаскиваемое уже лежит в нём. Состав меняется только перетаскиванием выбранных нод, а не проездом контейнера.
+     */
+    const dropTarget = ref<string | null>(null);
+    /**
      * Состояние перетаскивания: стартовые положения всех двигающихся нод (выделенные и едущие с контейнерами),
      * захваченная нода, за левый верхний угол которой работает привязка, и накопленный «сырой» сдвиг мыши.
      * Положение считается от старта, а не накоплением приращений: иначе привязка «залипала» бы.
@@ -39,6 +44,9 @@ export function useDrag({ workspace, registry, selection, view, snapEnabled, gui
         /** Прямоугольник всех двигающихся нод на старте и прямоугольники остальных (кроме точек на связях). */
         box: GuideRect;
         others: GuideRect[];
+        /** Выбранные ноды, не едущие в составе другой выбранной: именно они меняют контейнер. */
+        roots: string[];
+        moved: boolean;
     } | null = null;
     /** Ноды, едущие вместе с перетаскиваемыми контейнерами. */
     let carried = new Set<string>();
@@ -56,6 +64,8 @@ export function useDrag({ workspace, registry, selection, view, snapEnabled, gui
             rx: 0,
             ry: 0,
             ...guideRects(start),
+            roots: [...selection].filter((id) => !carried.has(id) && workspace.value.nodes[id]),
+            moved: false,
         };
     }
 
@@ -80,10 +90,38 @@ export function useDrag({ workspace, registry, selection, view, snapEnabled, gui
         return { box, others };
     }
 
+    /** Контейнер под центром перетаскиваемого (точнее, под центром охвата выбранных нод). */
+    function targetNow(): string | null {
+        if (!drag || drag.roots.length === 0) return null;
+        let x0 = Infinity;
+        let y0 = Infinity;
+        let x1 = -Infinity;
+        let y1 = -Infinity;
+        for (const id of drag.roots) {
+            const n = workspace.value.nodes[id];
+            if (!n) continue;
+            x0 = Math.min(x0, n.x);
+            y0 = Math.min(y0, n.y);
+            x1 = Math.max(x1, n.x + n.w);
+            y1 = Math.max(y1, n.y + n.h);
+        }
+        if (!Number.isFinite(x0)) return null;
+        return containerAt(workspace.value, registry, drag.roots, [(x0 + x1) / 2, (y0 + y1) / 2]);
+    }
+
+    /** Все выбранные уже лежат в этом контейнере (или ни в каком, если `target` пуст). */
+    const alreadyIn = (target: string | null) => !!drag && drag.roots.every((id) => (workspace.value.nodes[id]?.parent ?? null) === target);
+
     function endDrag() {
+        // Состав меняется один раз, при отпускании, и только если выбранные ноды действительно двигали.
+        if (drag?.moved) {
+            const target = targetNow();
+            if (!alreadyIn(target)) setParent(workspace.value, registry, drag.roots, target);
+        }
         carried = new Set();
         drag = null;
         guides.value = [];
+        dropTarget.value = null;
     }
 
     /** Двигает выделенные ноды (и едущие с ними) на (dx, dy). С `snap` левый верхний угол захваченной ноды липнет к сетке. */
@@ -102,6 +140,7 @@ export function useDrag({ workspace, registry, selection, view, snapEnabled, gui
 
         drag.rx += dx;
         drag.ry += dy;
+        drag.moved = drag.rx !== 0 || drag.ry !== 0;
         let ox = drag.rx;
         let oy = drag.ry;
 
@@ -138,6 +177,9 @@ export function useDrag({ workspace, registry, selection, view, snapEnabled, gui
                 node.y = y + oy;
             }
         }
+
+        const target = targetNow();
+        dropTarget.value = alreadyIn(target) ? null : target;
     }
 
     function minSizeOf(type: string) {
@@ -157,5 +199,5 @@ export function useDrag({ workspace, registry, selection, view, snapEnabled, gui
         Object.assign(node, resizeRect(start, edge, dx, dy, minSizeOf(node.type), snap ? (v) => softSnap(v, GRID, t) : undefined));
     }
 
-    return { guides, beginDrag, endDrag, moveSelected, resizeFrom };
+    return { guides, dropTarget, beginDrag, endDrag, moveSelected, resizeFrom };
 }

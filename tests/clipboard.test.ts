@@ -14,7 +14,7 @@ describe('буфер: текст и разбор', () => {
     function sample() {
         const ws = createWorkspace();
         addNode(ws, registry, 'group', { id: 'g', x: 0, y: 0, w: 400, h: 300 });
-        addNode(ws, registry, 'note', { id: 'inside', x: 20, y: 40, w: 100, h: 80, data: { text: 'внутри' } });
+        addNode(ws, registry, 'note', { id: 'inside', x: 20, y: 40, w: 100, h: 80, data: { text: 'внутри' }, parent: 'g' });
         addNode(ws, registry, 'note', { id: 'a', x: 600, y: 0 });
         addNode(ws, registry, 'note', { id: 'b', x: 900, y: 0 });
         connect(ws, { node: 'a', side: 'right' }, { node: 'b', side: 'left' }, 'end');
