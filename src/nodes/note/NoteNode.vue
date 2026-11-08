@@ -1,17 +1,20 @@
 <script lang="ts" setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from '@/i18n';
-import { fitFontSize, fittedSizes } from './fit';
+import { FONT_INPUT_MAX, FONT_MAX, FONT_MIN, fitFontSize, fittedSizes, stickerScale } from './fit';
 
 /**
- * Стикер: цветной квадрат с текстом. По умолчанию текст по центру и крупный; пока печатаешь, он уменьшается, чтобы
- * влезть, а если стикер растянуть, шрифт растёт под свободное место. Размер шрифта можно задать руками (`size`).
- * Размер всегда считается по невидимому «зеркалу» с тем же текстом (при правке поле ввода лежит поверх него), поэтому
- * текст не меняется в размере при входе в правку.
- * A sticker: a coloured square with text. By default the text is centred and large; while typing it shrinks to fit, and
- * when the sticker is stretched the font grows into the free space. The size can be set by hand (`size`).
- * The size is always measured on an invisible "mirror" with the same text (while editing the field lies over it), so the
- * text does not change size when editing starts.
+ * Стикер: цветной квадрат с текстом. Размер стикера работает как зум: текст растёт и уменьшается вместе с ним, а число
+ * размера шрифта (логическое) не меняется. «Авто» (`size` 0) подбирает самый крупный размер, при котором текст влезает,
+ * и пересчитывает его при наборе. Заданный руками размер не может не влезать: если перестал (стикер сузили, текста
+ * прибавилось), включается «Авто».
+ * Содержимое лежит в логической рамке (размер стикера, делённый на масштаб) и масштабируется `transform`; размер
+ * считается по невидимому «зеркалу» с тем же текстом, при правке поле ввода лежит поверх него.
+ * A sticker: a coloured square with text. Its size works as a zoom: the text grows and shrinks with it, while the font
+ * size number (logical) stays. "Auto" (`size` 0) picks the largest size at which the text fits and recomputes it while
+ * typing. A size set by hand cannot overflow: if it stops fitting (the sticker was narrowed, text was added), "Auto" turns on.
+ * The content lies in a logical frame (the sticker size divided by the scale) scaled by `transform`; the size is measured
+ * on an invisible "mirror" with the same text, and while editing the input field lies over it.
  */
 const props = defineProps<{
     data: { text: string; size?: number; bold?: boolean; align?: 'left' | 'center' | 'right'; valign?: 'top' | 'middle' | 'bottom' };
@@ -19,7 +22,7 @@ const props = defineProps<{
     editing?: boolean;
     nodeId?: string;
 }>();
-const emit = defineEmits<{ change: [patch: { text: string }]; 'edit-end': [] }>();
+const emit = defineEmits<{ change: [patch: { text?: string; size?: number }]; 'edit-end': [] }>();
 
 const { t } = useI18n();
 
@@ -27,8 +30,15 @@ const PAD = 14;
 const root = ref<HTMLElement | null>(null);
 const view = ref<HTMLElement | null>(null);
 const field = ref<HTMLTextAreaElement | null>(null);
-/** Размер, подобранный автоматически (если `size` не задан). */
+
+/** Размер стикера на экране (без учёта зума холста) и масштаб содержимого. */
+const box = ref({ w: 240, h: 160 });
+const scale = computed(() => stickerScale(box.value.w, box.value.h));
+const logical = computed(() => ({ w: box.value.w / scale.value, h: box.value.h / scale.value }));
+
+/** Размер, подобранный автоматически, и самый крупный, который влезает (логические). */
 const fitted = ref(24);
+const maxFit = ref(FONT_MAX);
 
 const manual = computed(() => (props.data.size && props.data.size > 0 ? props.data.size : 0));
 const px = computed(() => manual.value || fitted.value);
@@ -49,11 +59,25 @@ function heightAt(size: number): number {
 }
 
 function refit() {
-    const box = root.value;
-    if (!box || manual.value) return;
-    // Пустой стикер показывает подсказку обычным размером, а не огромным.
-    fitted.value = props.data.text || props.editing ? fitFontSize(heightAt, box.clientHeight - PAD * 2) : 22;
+    if (!root.value) return;
+    const hasText = !!props.data.text || !!props.editing;
+    if (hasText) {
+        maxFit.value = fitFontSize(heightAt, logical.value.h - PAD * 2, FONT_MIN, FONT_INPUT_MAX);
+        fitted.value = Math.min(maxFit.value, FONT_MAX);
+    } else {
+        // Пустой стикер показывает подсказку обычным размером, а не огромным.
+        maxFit.value = FONT_MAX;
+        fitted.value = 22;
+    }
     view.value?.style.removeProperty('font-size'); // дальше размер ведёт шаблон
+    // Заданный размер, который перестал влезать, уступает «Авто».
+    if (hasText && manual.value && manual.value > maxFit.value) emit('change', { size: 0 });
+    if (props.nodeId) fittedSizes[props.nodeId] = { size: px.value, max: maxFit.value };
+}
+
+function measure() {
+    const el = root.value;
+    if (el) box.value = { w: el.clientWidth || box.value.w, h: el.clientHeight || box.value.h };
 }
 
 watch(
@@ -69,16 +93,21 @@ watch(
     { immediate: true },
 );
 watch(() => [props.data.text, props.data.size, props.data.bold], () => nextTick(refit));
-
-// Размер для панели: там показывается число и при «Авто».
-watch(px, (v) => props.nodeId && (fittedSizes[props.nodeId] = v), { immediate: true });
+watch(px, (v) => props.nodeId && (fittedSizes[props.nodeId] = { size: v, max: maxFit.value }));
 
 let observer: ResizeObserver | null = null;
-onMounted(() => {
+async function onResize() {
+    measure();
+    await nextTick();
+    refit();
+}
+onMounted(async () => {
+    measure();
     if (root.value && typeof ResizeObserver === 'function') {
-        observer = new ResizeObserver(refit);
+        observer = new ResizeObserver(onResize);
         observer.observe(root.value);
     }
+    await nextTick();
     refit();
 });
 onBeforeUnmount(() => {
@@ -92,35 +121,46 @@ function onInput(e: Event) {
 </script>
 
 <template>
-    <div ref="root" class="sticker" :class="[`a-${align}`, `v-${valign}`, { bold: data.bold }]" :style="{ '--px': `${px}px`, '--pad': `${PAD}px` }">
-        <div class="slot">
-            <!-- Зеркало: по нему считается размер; без правки оно же и показывает текст, его таскают за любое место. -->
-            <div ref="view" class="body view" :class="{ empty: !data.text && !editing, ghost: editing }" :data-node-handle="editing ? undefined : ''">{{ shown }}</div>
-            <textarea
-                v-if="editing"
-                ref="field"
-                class="body edit"
-                :value="data.text"
-                :placeholder="t('nodes.note.placeholder')"
-                spellcheck="false"
-                @input="onInput"
-                @blur="emit('edit-end')"
-                @keydown.esc.stop.prevent="($event.target as HTMLTextAreaElement).blur()"
-            />
+    <div ref="root" class="sticker-box">
+        <div
+            class="sticker"
+            :class="[`a-${align}`, `v-${valign}`, { bold: data.bold }]"
+            :style="{ '--px': `${px}px`, '--pad': `${PAD}px`, width: `${logical.w}px`, height: `${logical.h}px`, transform: `scale(${scale})` }"
+        >
+            <div class="slot">
+                <!-- Зеркало: по нему считается размер; без правки оно же и показывает текст, его таскают за любое место. -->
+                <div ref="view" class="body view" :class="{ empty: !data.text && !editing, ghost: editing }" :data-node-handle="editing ? undefined : ''">{{ shown }}</div>
+                <textarea
+                    v-if="editing"
+                    ref="field"
+                    class="body edit"
+                    :value="data.text"
+                    :placeholder="t('nodes.note.placeholder')"
+                    spellcheck="false"
+                    @input="onInput"
+                    @blur="emit('edit-end')"
+                    @keydown.esc.stop.prevent="($event.target as HTMLTextAreaElement).blur()"
+                />
+            </div>
         </div>
     </div>
 </template>
 
 <style scoped>
+.sticker-box {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: inherit;
+}
+
 .sticker {
     display: flex;
     align-items: center;
     box-sizing: border-box;
-    width: 100%;
-    height: 100%;
     padding: var(--pad);
     overflow: hidden;
-    border-radius: inherit;
+    transform-origin: 0 0;
 }
 
 .sticker.v-top {

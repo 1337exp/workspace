@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FONT_MAX, FONT_MIN, fitFontSize } from '@/nodes/note/fit';
+import { FONT_MAX, FONT_MIN, STICKER_BASE, fitFontSize, stickerScale } from '@/nodes/note/fit';
 
 describe('стикер: размер шрифта', () => {
     // Модель: текст занимает высоту, пропорциональную квадрату размера.
@@ -18,4 +18,12 @@ describe('стикер: размер шрифта', () => {
         expect(fitFontSize(heightAt, 0)).toBe(FONT_MAX);
     });
 
+
+    it('стикер как зум: масштаб по меньшей стороне, у нового стикера 1', () => {
+        expect(stickerScale(STICKER_BASE.w, STICKER_BASE.h)).toBe(1);
+        expect(stickerScale(STICKER_BASE.w * 2, STICKER_BASE.h * 2)).toBe(2);
+        expect(stickerScale(STICKER_BASE.w * 3, STICKER_BASE.h)).toBe(1); // вытянули в ширину: текст не растёт
+        expect(stickerScale(STICKER_BASE.w / 2, STICKER_BASE.h)).toBe(0.5);
+        expect(stickerScale(0, 0)).toBe(1);
+    });
 });

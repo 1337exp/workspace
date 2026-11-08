@@ -72,7 +72,9 @@ function patchTexts(patch: Record<string, unknown>) {
     for (const n of texty.value) editor.patchData(n.id, patch);
 }
 /** Число в поле: заданный размер, а при «Авто» тот, с которым стикер рисуется сейчас. */
-const shownSize = computed(() => fontSize.value || fittedSizes[texty.value[0]?.id ?? ''] || null);
+const shownSize = computed(() => fontSize.value || fittedSizes[texty.value[0]?.id ?? '']?.size || null);
+/** Самый крупный размер, который влезает во все выделенные стикеры. */
+const maxSize = computed(() => Math.min(...texty.value.map((n) => fittedSizes[n.id]?.max ?? Infinity)));
 const textVAlign = computed<'top' | 'middle' | 'bottom'>(() => common((d) => (d.valign === 'top' || d.valign === 'bottom' ? d.valign : 'middle')) ?? 'middle');
 const VALIGNS = ['top', 'middle', 'bottom'] as const;
 const cycleVAlign = () => patchTexts({ valign: VALIGNS[(VALIGNS.indexOf(textVAlign.value) + 1) % VALIGNS.length] });
@@ -187,7 +189,7 @@ function setArrow(value: unknown) {
             <template v-if="texty.length">
                 <TaoToolbarSeparator v-if="canColor" />
                 <TaoToolbarGroup :label="t('context.text')">
-                    <FontSizeField :size="shownSize" :auto="fontSize === 0" :title="t('context.fontAuto')" @set="(n) => patchTexts({ size: n })" @auto="patchTexts({ size: 0 })" />
+                    <FontSizeField :size="shownSize" :auto="fontSize === 0" :max="Number.isFinite(maxSize) ? maxSize : undefined" :title="t('context.fontAuto')" @set="(n) => patchTexts({ size: n })" @auto="patchTexts({ size: 0 })" />
                     <TaoButton variant="ghost" tone="neutral" icon="text-bold" :pressed="isBold" :aria-label="t('context.bold')" :title="t('context.bold')" @click="patchTexts({ bold: !isBold })" />
                     <TaoButton variant="ghost" tone="neutral" :icon="`text-align-${textAlign}`" :aria-label="t('context.textAlign')" :title="t('context.textAlign')" @click="cycleAlign" />
                     <TaoButton variant="ghost" tone="neutral" :icon="`text-valign-${textVAlign}`" :aria-label="t('context.textVAlign')" :title="t('context.textVAlign')" @click="cycleVAlign" />
