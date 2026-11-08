@@ -202,10 +202,10 @@ function onPaste(e: ClipboardEvent, item: ChecklistItem) {
                 />
                 <!-- Пальцем Tab нет: две кнопки у пункта в фокусе. pointerdown.prevent оставляет фокус в поле, клавиатура не прячется. -->
                 <span class="nest">
-                    <button type="button" tabindex="-1" :aria-label="t('nodes.checklist.outdent')" @pointerdown.prevent @click="nest(item, 'out')">
+                    <button type="button" tabindex="-1" :aria-label="t('nodes.checklist.outdent')" :title="t('nodes.checklist.outdent') + ' (Shift+Tab)'" @pointerdown.prevent @click="nest(item, 'out')">
                         <TaoIcon name="tao-chevron-left" />
                     </button>
-                    <button type="button" tabindex="-1" :aria-label="t('nodes.checklist.indent')" @pointerdown.prevent @click="nest(item, 'in')">
+                    <button type="button" tabindex="-1" :aria-label="t('nodes.checklist.indent')" :title="t('nodes.checklist.indent') + ' (Tab)'" @pointerdown.prevent @click="nest(item, 'in')">
                         <TaoIcon name="tao-chevron-right" />
                     </button>
                 </span>
@@ -313,7 +313,7 @@ button.fold:hover {
     color: var(--tao-color-text);
 }
 
-/* Кнопки «вложить» и «вынести» нужны только пальцу и только у пункта, в котором стоит курсор. */
+/* Кнопки «вложить» и «вынести»: мышью видны при наведении на пункт, пальцем у пункта в фокусе (Tab там нет). */
 .nest {
     display: none;
     flex: none;
@@ -333,9 +333,16 @@ button.fold:hover {
     color: var(--tao-color-text);
 }
 
-@media (pointer: coarse) {
-    .item:focus-within .nest {
-        display: flex;
+.item:hover .nest,
+.item:focus-within .nest {
+    display: flex;
+}
+
+/* Мышью кнопки мельче: палец крупнее курсора. */
+@media (pointer: fine) {
+    .nest button {
+        width: 22px;
+        height: 22px;
     }
 }
 
