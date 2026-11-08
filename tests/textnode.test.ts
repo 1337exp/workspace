@@ -29,11 +29,11 @@ describe('нода «Текст»', () => {
         expect(editor.tool).toBe('select');
     });
 
-    it('заметка при создании в правку не уходит', () => {
+    it('стикер при создании сразу ждёт ввода', () => {
         const { editor, commands } = setup();
         commands.run('tool.place.note');
         editor.placeAt([300, 200]);
-        expect(editor.editingNode).toBeNull();
+        expect(editor.editingNode).not.toBeNull();
     });
 
     it('конец правки с пустым текстом удаляет ноду, с текстом оставляет', () => {
@@ -64,12 +64,12 @@ describe('нода «Текст»', () => {
         expect(editor.workspace.nodes[n.id]).toBeDefined();
     });
 
-    it('двойной клик включает правку у текста, а у заметки нет', () => {
+    it('двойной клик включает правку и у текста, и у стикера', () => {
         const { editor } = setup();
         const text = editor.addNodeAtCenter('text');
         const note = editor.addNodeAtCenter('note');
         editor.startEdit(note.id);
-        expect(editor.editingNode).toBeNull();
+        expect(editor.editingNode).toBe(note.id);
         editor.startEdit(text.id);
         expect(editor.editingNode).toBe(text.id);
     });

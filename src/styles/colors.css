@@ -10,4 +10,8 @@
     --tint-cyan: #46b3c9;
     --tint-blue: #5b8def;
     --tint-purple: #a47be0;
+
+    /* Тень нод: мягкая, вдвое слабее прежней; у выделенной чуть выше. */
+    --ws-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
+    --ws-shadow-lifted: 0 2px 8px rgba(0, 0, 0, 0.28);
 }

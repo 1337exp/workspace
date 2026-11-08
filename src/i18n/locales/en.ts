@@ -64,6 +64,13 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
         nodeActions: 'Node properties',
         color: 'Color',
         noColor: 'No color',
+        text: 'Text',
+        auto: 'Auto',
+        fontAuto: 'Font size: fit to the sticker',
+        fontUp: 'Larger',
+        fontDown: 'Smaller',
+        bold: 'Bold',
+        textAlign: 'Text alignment',
         delete: 'Delete',
         selected: 'Selected: {0}',
         straighten: 'Straighten',
@@ -154,7 +161,7 @@ const en: Shape<Dict> & { nodeTexts: NodeTexts } = {
     },
 
     nodes: {
-        note: { placeholder: 'Note text…' },
+        note: { placeholder: 'Sticker text…' },
         text: { placeholder: 'Text', action: { large: 'Large text' } },
         link: { placeholder: 'Link address', empty: 'Paste a link address', invalid: 'Not a web address (http or https needed)', open: 'Open' },
         checklist: { item: 'Item', add: 'Add item', move: 'Move item', progress: '{0} of {1}', action: { hideDone: 'Hide completed' } },

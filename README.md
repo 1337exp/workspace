@@ -26,15 +26,15 @@ npm run screenshot  # docs/media/*.png for the README, needs Chrome or Edge
 
 | Node | Key | What it is |
 |---|---|---|
-| Note | `N` | a frame with a strip and text |
+| Sticker | `N` | a coloured square with centred text; the font is large and shrinks while you type to fit, and grows when the sticker is stretched. The bar over it has the font size ("Auto" or a number), bold and alignment. A double click edits the text, it is dragged by any place |
 | Text | `T` | text right on the canvas, no frame; click and type at once; a double click edits; the height follows the content, an emptied text disappears; the colour from the bar tints the letters |
 | Checklist | `L` | items with a tick: `Enter` adds an item below, `Backspace` in an empty one removes it, `↑` `↓` walk the items, an item is dragged by the handle on the left (and from the keyboard: on the handle `Space` lifts, arrows move, `Space` drops, `Esc` cancels), pasting multi-line text spreads it over items (`-`, `*`, `•` and `[ ]` / `[x]` are understood); a counter and a progress line at the bottom; "Hide completed" in the bar over the node |
 | Group | `G` | a frame under the rest: nodes wholly inside it travel with it when you drag it by its strip |
-| Emoji | `E` | a sticker: one emoji over the whole node, its size grows with the node; the button in the left dock opens a grid of 54 emoji, the picked one is placed by the next click, `E` places the last picked; the bar over a picked sticker has a button to change it; it lies over the other nodes and links; no colour |
+| Reaction | `E` | a sticker: one emoji over the whole node, its size grows with the node; the button in the left dock opens a grid of 54 emoji, the picked one is placed by the next click, `E` places the last picked; the bar over a picked sticker has a button to change it; it lies over the other nodes and links; no colour |
 | Image | `I` | an image by its link |
 | Link | `K` | a card: the host big, the address small, a button opens it in a new tab; `example.com` becomes `https://example.com`; only `http` and `https` open; we do not fetch the page (no title, no icon), so that addresses are not sent to third-party services |
 
-The title in the strip (of a note, group, checklist, link) is edited with a double click.
+The title in the strip (of a group, checklist, link) is edited with a double click.
 
 **Canvas.**
 
@@ -101,6 +101,7 @@ The rest of the definition is optional:
 - `titleKey`: the data field with the title in the strip (edited with a double click);
 - `container`: a group node, lies under the rest and carries what is inside;
 - `bare`: no frame and no strip (text, sticker);
+- `sticker`: a colour fill with a soft shadow, yellow without a colour; `textStyle`: text settings in the bar (`size`, `bold`, `align` in the data);
 - `order`: the place in the left dock, the palette and the help (numbers with gaps: 10, 20, …);
 - `overlay`: drawn over the other nodes and links (a sticker); `colorable: false`: cannot be coloured;
 - `inlineEdit` and `isEmpty`: editing in place and removing an empty node after it; the component gets `editing` and reports `edit-end` and `fit` (the height it needs);

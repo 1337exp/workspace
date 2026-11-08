@@ -10,6 +10,7 @@ import { useI18n, type MessageKey } from '@/i18n';
 import { ALIGN_COMMANDS, useCommands } from '../commands';
 import { floatingPosition } from '../floating';
 import { rememberEmoji } from '@/nodes/emoji';
+import { stepFontSize } from '@/nodes/note/fit';
 import { useEditor } from '../store';
 import EmojiPicker from './EmojiPicker.vue';
 
@@ -51,6 +52,40 @@ function changeEmoji(emoji: string) {
     for (const n of stickers.value) editor.patchData(n.id, { emoji });
     emojiOpen.value = false;
 }
+
+/** Выделены одни ноды с настройками текста (стикеры): размер шрифта, жирный, выравнивание. */
+const texty = computed(() => {
+    const nodes = [...editor.selection].map((id) => editor.workspace.nodes[id]).filter((n) => n !== undefined);
+    return nodes.length > 0 && nodes.every((n) => editor.registry.find(n.type)?.textStyle) ? nodes : [];
+});
+const common = <T,>(pick: (d: Record<string, unknown>) => T): T | undefined => {
+    const set = new Set(texty.value.map((n) => pick(n.data)));
+    return set.size === 1 ? [...set][0] : undefined;
+};
+const fontSize = computed(() => common((d) => (typeof d.size === 'number' ? d.size : 0)) ?? 0);
+const isBold = computed(() => common((d) => d.bold === true) === true);
+const textAlign = computed<'left' | 'center' | 'right'>(() => common((d) => (d.align === 'left' || d.align === 'right' ? d.align : 'center')) ?? 'center');
+const ALIGNS = ['left', 'center', 'right'] as const;
+
+function patchTexts(patch: Record<string, unknown>) {
+    for (const n of texty.value) editor.patchData(n.id, patch);
+}
+const stepSize = (dir: 1 | -1) => patchTexts({ size: stepFontSize(fontSize.value, dir) });
+const cycleAlign = () => patchTexts({ align: ALIGNS[(ALIGNS.indexOf(textAlign.value) + 1) % ALIGNS.length] });
+
+/** Цвет одной точкой: окошко с палитрой открывается по нажатию на неё. */
+const colorOpen = ref(false);
+function pickColor(color: NodeColor | null) {
+    editor.setColor(color);
+    colorOpen.value = false;
+}
+/** Цвет точки: выбранный; у стикера без цвета жёлтый (он так и рисуется). */
+const dotColor = computed(() => {
+    const c = editor.selectionColor;
+    if (c) return `var(--tint-${c})`;
+    const allSticker = editor.colorable.every((id) => editor.registry.find(editor.workspace.nodes[id]?.type ?? '')?.sticker);
+    return allSticker ? 'var(--tint-yellow)' : null;
+});
 
 const bar = ref<HTMLElement | null>(null);
 
@@ -124,29 +159,39 @@ function setArrow(value: unknown) {
         <TaoToolbar :label="t('context.title')">
             <TaoToolbarGroup v-if="canColor" :label="t('context.color')">
                 <span v-if="nodeCount > 1" class="count">{{ t('context.selected', [nodeCount]) }}</span>
-                <div class="swatches" role="group" :aria-label="t('context.color')">
-                    <button
-                        class="swatch none"
-                        :class="{ active: active(null) }"
-                        :title="t('context.noColor')"
-                        :aria-label="t('context.noColor')"
-                        @click="editor.setColor(null)"
-                    />
-                    <button
-                        v-for="color in NODE_COLORS"
-                        :key="color"
-                        class="swatch"
-                        :class="{ active: active(color) }"
-                        :style="{ '--swatch': `var(--tint-${color})` }"
-                        :title="t(`context.colors.${color}`)"
-                        :aria-label="t(`context.colors.${color}`)"
-                        @click="editor.setColor(color)"
-                    />
-                </div>
+                <TaoPopover v-model="colorOpen" placement="top">
+                    <template #trigger>
+                        <button class="swatch dot" :class="{ none: !dotColor }" :style="{ '--swatch': dotColor ?? 'transparent' }" :title="t('context.color')" :aria-label="t('context.color')" />
+                    </template>
+                    <div class="swatches palette" role="group" :aria-label="t('context.color')">
+                        <button class="swatch none" :class="{ active: active(null) }" :title="t('context.noColor')" :aria-label="t('context.noColor')" @click="pickColor(null)" />
+                        <button
+                            v-for="color in NODE_COLORS"
+                            :key="color"
+                            class="swatch"
+                            :class="{ active: active(color) }"
+                            :style="{ '--swatch': `var(--tint-${color})` }"
+                            :title="t(`context.colors.${color}`)"
+                            :aria-label="t(`context.colors.${color}`)"
+                            @click="pickColor(color)"
+                        />
+                    </div>
+                </TaoPopover>
             </TaoToolbarGroup>
 
-            <template v-if="stickers.length">
+            <template v-if="texty.length">
                 <TaoToolbarSeparator v-if="canColor" />
+                <TaoToolbarGroup :label="t('context.text')">
+                    <TaoButton variant="ghost" tone="neutral" class="size-label" :aria-label="t('context.fontAuto')" :title="t('context.fontAuto')" @click="patchTexts({ size: 0 })">{{ fontSize || t('context.auto') }}</TaoButton>
+                    <TaoButton variant="ghost" tone="neutral" icon="step-up" :aria-label="t('context.fontUp')" :title="t('context.fontUp')" @click="stepSize(1)" />
+                    <TaoButton variant="ghost" tone="neutral" icon="step-down" :aria-label="t('context.fontDown')" :title="t('context.fontDown')" @click="stepSize(-1)" />
+                    <TaoButton variant="ghost" tone="neutral" icon="text-bold" :pressed="isBold" :aria-label="t('context.bold')" :title="t('context.bold')" @click="patchTexts({ bold: !isBold })" />
+                    <TaoButton variant="ghost" tone="neutral" :icon="`text-align-${textAlign}`" :aria-label="t('context.textAlign')" :title="t('context.textAlign')" @click="cycleAlign" />
+                </TaoToolbarGroup>
+            </template>
+
+            <template v-if="stickers.length">
+                <TaoToolbarSeparator v-if="canColor || texty.length" />
                 <TaoToolbarGroup :label="t('emoji.change')">
                     <TaoPopover placement="top" v-model="emojiOpen">
                         <template #trigger>
@@ -217,7 +262,7 @@ function setArrow(value: unknown) {
             </template>
 
             <!-- Разделитель нужен, только если слева от «Удалить» что-то есть (у точки на связи там пусто). -->
-            <TaoToolbarSeparator v-if="canColor || editor.nodeActions.length || stickers.length || nodeCount > 1 || link" />
+            <TaoToolbarSeparator v-if="canColor || editor.nodeActions.length || stickers.length || texty.length || nodeCount > 1 || link" />
             <TaoToolbarGroup>
                 <TaoButton variant="ghost" tone="danger" :icon="cmd.icon('edit.delete')" :aria-label="cmd.label('edit.delete')" :shortcut="cmd.shortcutLabel('edit.delete')" @click="cmd.run('edit.delete')" />
             </TaoToolbarGroup>
@@ -252,6 +297,15 @@ function setArrow(value: unknown) {
     color: var(--tao-color-text-muted);
     font-size: 12px;
     white-space: nowrap;
+}
+
+.palette {
+    padding: 8px;
+}
+
+.size-label {
+    min-width: 3.2em;
+    font-variant-numeric: tabular-nums;
 }
 
 .swatches {

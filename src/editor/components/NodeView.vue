@@ -81,7 +81,7 @@ function finishTitle(save: boolean) {
     <div
         v-else
         class="node"
-        :class="{ selected, unknown: !def, container: def?.container, tinted: tint, bare: def?.bare }"
+        :class="{ selected, unknown: !def, container: def?.container, tinted: tint, bare: def?.bare, sticker: def?.sticker }"
         :data-node-id="node.id"
         :data-node-container="def?.container ? '' : undefined"
         :style="nodeStyle"
@@ -189,12 +189,12 @@ function finishTitle(save: boolean) {
     border: 1px solid var(--tao-color-border-strong, #4b5563);
     border-radius: 8px;
     background: var(--tao-color-surface-raised, #1f2937);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--ws-shadow);
 }
 
 .node.selected .frame {
     border-color: var(--tao-color-accent, #f59e0b);
-    box-shadow: 0 0 0 1px var(--tao-color-accent, #f59e0b), 0 4px 14px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 0 0 1px var(--tao-color-accent, #f59e0b), var(--ws-shadow-lifted);
 }
 
 .node.unknown .frame {
@@ -207,6 +207,18 @@ function finishTitle(save: boolean) {
     height: 100%;
     border-radius: 6px;
     color: var(--tint, var(--tao-color-text-strong));
+}
+
+/* Стикер: заливка цветом ноды (без цвета жёлтая), тёмный текст, мягкая тень. */
+.node.sticker .bare-content {
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--tint, var(--tint-yellow)) 82%, white);
+    color: #1f2430;
+    box-shadow: var(--ws-shadow);
+}
+
+.node.sticker.selected .bare-content {
+    box-shadow: var(--ws-shadow-lifted);
 }
 
 .node.bare.selected .bare-content {

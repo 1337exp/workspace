@@ -61,6 +61,13 @@ export default {
         nodeActions: 'Свойства ноды',
         color: 'Цвет',
         noColor: 'Без цвета',
+        text: 'Текст',
+        auto: 'Авто',
+        fontAuto: 'Размер шрифта: подбирать по размеру стикера',
+        fontUp: 'Крупнее',
+        fontDown: 'Мельче',
+        bold: 'Жирный',
+        textAlign: 'Выравнивание текста',
         delete: 'Удалить',
         selected: 'Выбрано: {0}',
         straighten: 'Выпрямить',
@@ -151,7 +158,7 @@ export default {
     },
 
     nodes: {
-        note: { placeholder: 'Текст заметки…' },
+        note: { placeholder: 'Текст стикера…' },
         text: { placeholder: 'Текст', action: { large: 'Крупный текст' } },
         link: { placeholder: 'Адрес ссылки', empty: 'Вставь адрес ссылки', invalid: 'Это не веб-адрес (нужен http или https)', open: 'Открыть' },
         checklist: { item: 'Пункт', add: 'Добавить пункт', move: 'Переставить пункт', progress: '{0} из {1}', action: { hideDone: 'Скрыть выполненные' } },
@@ -165,11 +172,11 @@ export default {
 
     nodeTexts: {
         nodes: {
-            note: { title: 'Заметка' },
+            note: { title: 'Стикер' },
             text: { title: 'Текст' },
             checklist: { title: 'Чеклист' },
             link: { title: 'Ссылка' },
-            emoji: { title: 'Эмодзи' },
+            emoji: { title: 'Реакция' },
             image: { title: 'Картинка' },
             group: { title: 'Группа' },
             reroute: { title: 'Точка' },
