@@ -6,11 +6,11 @@ import { FONT_INPUT_MAX, FONT_INPUT_MIN, FONT_PRESETS } from '@/nodes/note/fit';
 
 /**
  * Размер шрифта: поле с числом и стрелками, а под ним меню быстрых вариантов («Авто» и ряд размеров). Меню открывается,
- * когда фокус в поле, и закрывается выбором или уходом из поля. Число показывает размер, с которым текст рисуется сейчас,
- * и при «Авто» тоже; пункт «Авто» в меню отмечен, пока размер подбирается сам.
+ * когда фокус в поле, и закрывается выбором или уходом из поля. В «Авто» поле пустое с приглушённой подсказкой «Авто»
+ * (размер «теневой»), а число появляется, когда размер задан; пункт «Авто» в меню отмечен.
  * Font size: a number field with arrows and a menu of quick choices under it ("Auto" and a row of sizes). The menu opens
- * while the field has the focus and closes on a pick or on leaving the field. The number is the size the text is drawn
- * with now, also in "Auto"; the "Auto" row is marked while the size is fitted.
+ * while the field has the focus and closes on a pick or on leaving the field. In "Auto" the field is empty with a muted
+ * "Auto" hint (the size is "shadow"), and the number appears once a size is set; the "Auto" row is marked.
  */
 const props = defineProps<{
     /** Размер, с которым рисуется текст. / The size the text is drawn with. */
@@ -30,8 +30,13 @@ const fits = (n: number) => n <= limit.value;
 
 function onCommit(value: number | null) {
     // Уход из поля тоже «завершает правку»: без этой проверки он записал бы показанное число поверх «Авто».
-    if (value === null || value === props.size) return;
-    emit('set', Math.min(value, limit.value));
+    if (value === null) return;
+    if (props.auto) {
+        // Стрелка из «Авто» даёт минимум: вместо него фиксируем размер, с которым текст рисуется сейчас.
+        emit('set', Math.min(value === FONT_INPUT_MIN && props.size ? props.size : value, limit.value));
+        return;
+    }
+    if (value !== props.size) emit('set', Math.min(value, limit.value));
 }
 function pick(size: number | null) {
     if (size === null) emit('auto');
@@ -45,7 +50,8 @@ function pick(size: number | null) {
     <div class="size-field" @focusin="open = true" @focusout="(e) => !(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null) && (open = false)" @keydown.esc.stop="open = false">
         <TaoInputNumber
             class="size-input"
-            :model-value="size"
+            :model-value="auto ? null : size"
+            :placeholder="t('context.auto')"
             :min="FONT_INPUT_MIN"
             :max="limit"
             :aria-label="t('context.fontSize')"
