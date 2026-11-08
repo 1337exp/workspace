@@ -41,12 +41,22 @@ watch(
     { immediate: true },
 );
 
-/** Поле появляется и сразу в фокусе с выделенным текстом. */
+/**
+ * Поле появляется и сразу в фокусе с выделенным текстом. Функция в `ref` вызывается при каждой перерисовке, а не только
+ * при появлении поля: без проверки каждая набранная буква снова выделяла бы весь текст и следующая затирала его.
+ * The field appears focused with its text selected. A function `ref` runs on every re-render, not only when the field
+ * appears: without the check each typed letter would select the whole text again and the next one would overwrite it.
+ */
+let focused: HTMLInputElement | null = null;
 function focusField(el: unknown) {
-    if (el instanceof HTMLInputElement) {
-        el.focus();
-        el.select();
+    if (!(el instanceof HTMLInputElement)) {
+        focused = null;
+        return;
     }
+    if (el === focused) return;
+    focused = el;
+    el.focus();
+    el.select();
 }
 
 function commit(id: string) {
