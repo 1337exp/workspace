@@ -7,6 +7,7 @@ export default defineNode({
     title: 'Group',
     icon: 'node-group',
     hotkey: 'G',
+    order: 60,
     size: { w: 480, h: 320, minW: 160, minH: 120 },
     create: () => ({ title: '' }),
     titleKey: 'title',

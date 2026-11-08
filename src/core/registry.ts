@@ -20,7 +20,11 @@ export class Registry {
         return def;
     }
 
+    /** Определения по `order` (без него в конце), при равенстве в порядке регистрации. */
     all(): AnyNodeDef[] {
-        return [...this.defs.values()];
+        return [...this.defs.values()]
+            .map((def, index) => ({ def, index }))
+            .sort((a, b) => (a.def.order ?? Infinity) - (b.def.order ?? Infinity) || a.index - b.index)
+            .map((x) => x.def);
     }
 }

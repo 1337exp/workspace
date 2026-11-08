@@ -8,6 +8,7 @@ export default defineNode<ChecklistData & { title: string }>({
     title: 'Checklist',
     icon: 'node-checklist',
     hotkey: 'L',
+    order: 30,
     size: { w: 260, h: 220, minW: 180, minH: 120 },
     create: () => ({ title: '', items: [emptyItem([])], hideDone: false }),
     titleKey: 'title',

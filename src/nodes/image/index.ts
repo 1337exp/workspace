@@ -7,6 +7,7 @@ export default defineNode({
     title: 'Image',
     icon: 'node-image',
     hotkey: 'I',
+    order: 80,
     size: { w: 260, h: 200, minW: 120, minH: 90 },
     create: () => ({ url: '' }),
     component: ImageNode,

@@ -8,6 +8,7 @@ export default defineNode({
     title: 'Text',
     icon: 'node-text',
     hotkey: 'T',
+    order: 20,
     size: { w: 220, h: 36, minW: 60, minH: 32 },
     create: () => ({ text: '', large: false }),
     bare: true,

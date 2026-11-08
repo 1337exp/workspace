@@ -370,3 +370,13 @@ describe('цвет ноды', () => {
         expect(isNodeColor('red')).toBe(true);
     });
 });
+
+describe('порядок нод в панели', () => {
+    it('all() идёт по order, без order в конце в порядке регистрации; точка на связях не в панели', () => {
+        const dock = createDefaultRegistry()
+            .all()
+            .filter((d) => !d.point)
+            .map((d) => d.id);
+        expect(dock).toEqual(['note', 'text', 'checklist', 'group', 'image', 'link']);
+    });
+});

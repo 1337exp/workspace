@@ -7,6 +7,7 @@ export default defineNode({
     title: 'Link',
     icon: 'node-link',
     hotkey: 'K',
+    order: 90,
     size: { w: 280, h: 120, minW: 200, minH: 100 },
     create: () => ({ title: '', url: '' }),
     titleKey: 'title',
