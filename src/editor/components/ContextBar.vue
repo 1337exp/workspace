@@ -185,7 +185,8 @@ function setArrow(value: unknown) {
                 </TaoToolbarGroup>
             </template>
 
-            <TaoToolbarSeparator />
+            <!-- Разделитель нужен, только если слева от «Удалить» что-то есть (у точки на связи там пусто). -->
+            <TaoToolbarSeparator v-if="canColor || editor.nodeActions.length || nodeCount > 1 || link" />
             <TaoToolbarGroup>
                 <TaoButton variant="ghost" tone="danger" :icon="cmd.icon('edit.delete')" :aria-label="cmd.label('edit.delete')" :shortcut="cmd.shortcutLabel('edit.delete')" @click="cmd.run('edit.delete')" />
             </TaoToolbarGroup>

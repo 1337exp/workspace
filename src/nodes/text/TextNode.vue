@@ -43,7 +43,8 @@ watch(
     },
     { immediate: true },
 );
-watch(() => props.data.text, () => nextTick(fit));
+// Смена размера шрифта («Крупный текст») меняет высоту текста, а размер самой ноды при этом не меняется: ResizeObserver молчит.
+watch(() => [props.data.text, props.data.large], () => nextTick(fit));
 
 // Ширину меняют растягиванием: тогда строки переносятся иначе, и высота пересчитывается.
 let observer: ResizeObserver | null = null;

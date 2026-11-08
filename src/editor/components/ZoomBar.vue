@@ -7,8 +7,8 @@ import { useEditor } from '../store';
 import HelpPanel from './HelpPanel.vue';
 
 /**
- * Панель масштаба внизу слева: меню «Вид», «−», процент (клик = 100%), «+» и справка. Всё из реестра команд.
- * The zoom bar at the bottom left: the "View" menu, "−", the percentage (a click = 100%), "+" and help.
+ * Панель масштаба внизу справа: меню «Вид», «−», процент (клик = 100%), «+» и справка. Всё из реестра команд.
+ * The zoom bar at the bottom right: the "View" menu, "−", the percentage (a click = 100%), "+" and help.
  * All of it comes from the command registry.
  */
 const editor = useEditor();
@@ -24,7 +24,7 @@ const viewMenu = useMenu(['view.fit', 'view.zoom100', '-', 'view.grid', 'view.gu
     <div class="zoom" @pointerdown.stop @wheel.stop @contextmenu.prevent>
         <TaoToolbar :label="t('view.zoomBar')">
             <TaoToolbarGroup>
-                <TaoDropdownMenu :items="viewMenu" placement="top-start" :menu-label="t('view.options')" @select="cmd.run">
+                <TaoDropdownMenu :items="viewMenu" placement="top-end" :menu-label="t('view.options')" @select="cmd.run">
                     <template #icon><TaoIcon name="view-list" /></template>
                 </TaoDropdownMenu>
             </TaoToolbarGroup>
@@ -49,7 +49,7 @@ const viewMenu = useMenu(['view.fit', 'view.zoom100', '-', 'view.grid', 'view.gu
 .zoom {
     position: absolute;
     bottom: max(12px, env(safe-area-inset-bottom));
-    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
     z-index: 10;
 }
 </style>
