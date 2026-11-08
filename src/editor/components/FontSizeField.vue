@@ -37,7 +37,6 @@ function pick(size: number | null) {
     <div class="size-field" @focusin="open = true" @focusout="(e) => !(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null) && (open = false)" @keydown.esc.stop="open = false">
         <TaoInputNumber
             class="size-input"
-            size="small"
             :model-value="size"
             :min="FONT_INPUT_MIN"
             :max="FONT_INPUT_MAX"
