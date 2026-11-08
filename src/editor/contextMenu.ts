@@ -1,7 +1,7 @@
 import { computed } from 'vue';
 import type { TaoMenuItem } from '@1337exp/taoui';
 import { formatHotkey } from '@1337exp/taoux/hotkeys';
-import { NODE_COLORS, type NodeColor } from '@/core/colors';
+import { QUICK_COLORS, type NodeColor } from '@/core/colors';
 import { useI18n, type MessageKey } from '@/i18n';
 import { clipboardActions } from './clipboard';
 import { ALIGN_COMMANDS, useCommands } from './commands';
@@ -60,7 +60,7 @@ export function useContextMenu() {
                 label: t('context.color'),
                 items: [
                     { type: 'radio', id: 'color:none', group: 'color', label: t('context.noColor'), checked: editor.selectionColor === null },
-                    ...NODE_COLORS.map(
+                    ...QUICK_COLORS.map(
                         (c): TaoMenuItem => ({ type: 'radio', id: `color:${c}`, group: 'color', label: t(`context.colors.${c}` as MessageKey), checked: editor.selectionColor === c }),
                     ),
                 ],

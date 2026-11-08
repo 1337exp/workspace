@@ -86,10 +86,17 @@ function pickColor(color: NodeColor | null) {
     editor.setColor(color);
     colorOpen.value = false;
 }
+/** Выделены одни стикеры: палитра показывает их светлые заливки (иначе насыщенные цвета остальных нод). */
+const onlyStickers = computed(() => editor.colorable.length > 0 && editor.colorable.every((id) => editor.registry.find(editor.workspace.nodes[id]?.type ?? '')?.sticker));
+/** Ячейки палитры 4×4: у стикеров «по умолчанию» (null) второй, как у FigJam; у остальных «без цвета» первый. */
+const paletteItems = computed<(NodeColor | null)[]>(() => (onlyStickers.value ? ['gray', null, ...NODE_COLORS.filter((c) => c !== 'gray')] : [null, ...NODE_COLORS]));
+const swatchColor = (c: NodeColor | null) => (c ? `var(--${onlyStickers.value ? 'fill' : 'tint'}-${c})` : onlyStickers.value ? 'var(--sticker-default)' : 'transparent');
+const swatchLabel = (c: NodeColor | null) => (c ? t(`context.colors.${c}`) : t('context.noColor'));
+
 /** Цвет точки: выбранный; у стикера без цвета жёлтый (он так и рисуется). */
 const dotColor = computed(() => {
     const c = editor.selectionColor;
-    if (c) return `var(--tint-${c})`;
+    if (c) return `var(--${onlyStickers.value ? 'fill' : 'tint'}-${c})`;
     const allSticker = editor.colorable.every((id) => editor.registry.find(editor.workspace.nodes[id]?.type ?? '')?.sticker);
     return allSticker ? 'var(--sticker-default)' : null;
 });
@@ -170,16 +177,16 @@ function setArrow(value: unknown) {
                     <template #trigger>
                         <button class="swatch dot" :class="{ none: !dotColor }" :style="{ '--swatch': dotColor ?? 'transparent' }" :title="t('context.color')" :aria-label="t('context.color')" />
                     </template>
-                    <div class="swatches palette" role="group" :aria-label="t('context.color')">
-                        <button class="swatch none" :class="{ active: active(null) }" :title="t('context.noColor')" :aria-label="t('context.noColor')" @click="pickColor(null)" />
+                    <div class="palette" role="group" :aria-label="t('context.color')">
                         <button
-                            v-for="color in NODE_COLORS"
-                            :key="color"
+                            v-for="color in paletteItems"
+                            :key="color ?? 'none'"
                             class="swatch"
-                            :class="{ active: active(color) }"
-                            :style="{ '--swatch': `var(--tint-${color})` }"
-                            :title="t(`context.colors.${color}`)"
-                            :aria-label="t(`context.colors.${color}`)"
+                            :class="{ active: active(color), none: color === null && !onlyStickers, dark: color === 'black' }"
+                            :style="{ '--swatch': swatchColor(color) }"
+                            :title="swatchLabel(color)"
+                            :aria-label="swatchLabel(color)"
+                            :aria-pressed="active(color)"
                             @click="pickColor(color)"
                         />
                     </div>
@@ -310,8 +317,39 @@ function setArrow(value: unknown) {
     margin: 7px;
 }
 
+/* Палитра: сетка 4×4 круглых ячеек, у выбранной галочка. */
 .palette {
-    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 32px);
+    gap: 10px;
+    padding: 10px;
+}
+
+.palette .swatch {
+    width: 32px;
+    height: 32px;
+    border: 1px solid color-mix(in srgb, var(--tao-color-text-strong) 14%, transparent);
+}
+
+.palette .swatch.active {
+    border-color: color-mix(in srgb, var(--tao-color-text-strong) 14%, transparent);
+    box-shadow: none;
+}
+
+.palette .swatch.active::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: 6px;
+    height: 12px;
+    border: solid #1f2430;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.palette .swatch.dark.active::before {
+    border-color: #fff;
 }
 
 .swatches {

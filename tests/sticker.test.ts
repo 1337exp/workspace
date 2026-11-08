@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { NODE_COLORS, QUICK_COLORS, isNodeColor } from '@/core/colors';
 import { FONT_MAX, FONT_MIN, STICKER_BASE, fitFontSize, stickerScale } from '@/nodes/note/fit';
 
 describe('стикер: размер шрифта', () => {
@@ -25,5 +26,12 @@ describe('стикер: размер шрифта', () => {
         expect(stickerScale(STICKER_BASE.w * 3, STICKER_BASE.h)).toBe(1); // вытянули в ширину: текст не растёт
         expect(stickerScale(STICKER_BASE.w / 2, STICKER_BASE.h)).toBe(0.5);
         expect(stickerScale(0, 0)).toBe(1);
+    });
+
+    it('палитра 15 цветов без повторов (с «по умолчанию» 16 ячеек 4×4); прежние имена сохранились, короткий список из них', () => {
+        expect(NODE_COLORS).toHaveLength(15);
+        expect(new Set(NODE_COLORS).size).toBe(15);
+        for (const old of ['red', 'yellow', 'green', 'cyan', 'blue', 'purple']) expect(isNodeColor(old)).toBe(true);
+        expect(QUICK_COLORS.every((c) => isNodeColor(c))).toBe(true);
     });
 });

@@ -34,7 +34,7 @@ const nodeStyle = computed(() => ({
     transform: `translate(${props.node.x}px, ${props.node.y}px)`,
     width: `${props.node.w}px`,
     height: `${props.node.h}px`,
-    ...(tint.value ? { '--tint': `var(--tint-${tint.value})` } : {}),
+    ...(tint.value ? { '--tint': `var(--tint-${tint.value})`, '--fill': `var(--fill-${tint.value})` } : {}),
 }));
 
 //--------------------------------------------------
@@ -83,6 +83,7 @@ function finishTitle(save: boolean) {
         class="node"
         :class="{ selected, unknown: !def, container: def?.container, tinted: tint, bare: def?.bare, sticker: def?.sticker }"
         :data-node-id="node.id"
+        :data-color="tint ?? undefined"
         :data-node-container="def?.container ? '' : undefined"
         :style="nodeStyle"
     >
@@ -213,13 +214,13 @@ function finishTitle(save: boolean) {
 /* Стикер: заливка цветом ноды (без цвета жёлтая), тёмный текст, мягкая тень. */
 .node.sticker .bare-content {
     border-radius: 4px;
-    background: var(--sticker-default);
+    background: var(--fill, var(--sticker-default));
     color: #1f2430;
     box-shadow: var(--ws-shadow);
 }
 
-.node.sticker.tinted .bare-content {
-    background: color-mix(in srgb, var(--tint) 82%, white);
+.node.sticker[data-color='black'] .bare-content {
+    color: #fff;
 }
 
 .node.sticker.selected .bare-content {

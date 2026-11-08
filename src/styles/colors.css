@@ -4,12 +4,36 @@
  * с фоном, поэтому здесь это «чистый» цвет.
  */
 :root {
-    --tint-red: #e5636a;
+    --tint-gray: #8b93a1;
+    --fill-gray: #eef0f3;
     --tint-yellow: #e0b84a;
+    --fill-yellow: #ffe066;
+    --tint-orange: #f0903c;
+    --fill-orange: #ffb070;
+    --tint-lime: #9bc53d;
+    --fill-lime: #d6f29e;
+    --tint-leaf: #7cb82f;
+    --fill-leaf: #a6e35b;
     --tint-green: #58b87a;
-    --tint-cyan: #46b3c9;
-    --tint-blue: #5b8def;
+    --fill-green: #62e08e;
+    --tint-mint: #3fb8aa;
+    --fill-mint: #7fe6dc;
+    --tint-rose: #e68ac2;
+    --fill-rose: #ffd0ec;
+    --tint-pink: #e05cb8;
+    --fill-pink: #ff8fd8;
     --tint-purple: #a47be0;
+    --fill-purple: #b9a8ff;
+    --tint-red: #e5636a;
+    --fill-red: #ff9a9a;
+    --tint-ice: #7fa3e0;
+    --fill-ice: #bcd3ff;
+    --tint-cyan: #46b3c9;
+    --fill-cyan: #8fe3ff;
+    --tint-blue: #5b8def;
+    --fill-blue: #86b0ff;
+    --tint-black: var(--tao-color-text-strong, #e5e7eb);
+    --fill-black: #1a1a1a;
 
     /* Стикер без выбранного цвета. */
     --sticker-default: #fff7a3;
