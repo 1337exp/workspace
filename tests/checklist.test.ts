@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { emptyItem, insertItem, newId, pasteLines, progress, removeItem, reorder, type ChecklistItem } from '@/nodes/checklist/items';
+import { emptyItem, flatten, insertItem, newId, pasteLines, progress, removeItem, reorder, type ChecklistItem } from '@/nodes/checklist/items';
 import { useEditor } from '@/editor/store';
 import { parse, serialize } from '@/core/serialize';
 
@@ -142,5 +142,29 @@ describe('перестановка пунктов', () => {
         expect(ids(reorder(list, list, 9, 0))).toBe('abcd');
         expect(ids(reorder(list, list, 0, 9))).toBe('abcd');
         expect(ids(list)).toBe('abcd');
+    });
+});
+
+describe('плоский список: старые данные и вставка', () => {
+    it('flatten выбрасывает вложенность прежней версии, порядок и отметки остаются; чистый список не копируется', () => {
+        const legacy = [
+            { id: 'a', text: 'родитель', done: true },
+            { id: 'b', text: 'ребёнок', done: false, depth: 1 },
+            { id: 'c', text: 'свёрнутый', done: false, depth: 2, collapsed: true },
+        ] as unknown as ChecklistItem[];
+        const flat = flatten(legacy);
+        expect(flat).toEqual([
+            { id: 'a', text: 'родитель', done: true },
+            { id: 'b', text: 'ребёнок', done: false },
+            { id: 'c', text: 'свёрнутый', done: false },
+        ]);
+        const clean = [item('x', 'x')];
+        expect(flatten(clean)[0]).toBe(clean[0]); // без лишних полей тот же объект
+    });
+
+    it('вставка: маркеры списка и [x] понимаются, отступы игнорируются (вложенности нет)', () => {
+        const r = pasteLines([item('a', '')], 'a', '- [ ] план\n\t- [x] сделано\n    * ещё\n• конец')!;
+        expect(r.items.map((i) => `${i.text}:${i.done}`)).toEqual(['план:false', 'сделано:true', 'ещё:false', 'конец:false']);
+        expect(r.items.every((i) => !('depth' in i))).toBe(true);
     });
 });
