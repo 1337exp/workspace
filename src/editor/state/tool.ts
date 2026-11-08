@@ -30,12 +30,15 @@ export function useTool({ workspace, registry, selection, place, snapEnabled, ed
     const tool = ref<ToolId>(SELECT_TOOL);
     /** Данные для ноды, которую поставит следующий клик (выбранный эмодзи); без них берутся данные по умолчанию. */
     const placeData = ref<NodeData | null>(null);
+    /** Размер для ноды, которую поставит следующий клик (выбранная заготовка); без него берётся размер по умолчанию. */
+    const placeSize = ref<{ w: number; h: number } | null>(null);
     /** Включён инструмент «поставить». / A "place" tool is armed. */
     const placing = computed(() => tool.value !== SELECT_TOOL && registry.find(tool.value) !== undefined);
 
-    function setTool(id: ToolId, data?: NodeData) {
+    function setTool(id: ToolId, data?: NodeData, size?: { w: number; h: number }) {
         tool.value = id === SELECT_TOOL || registry.find(id) ? id : SELECT_TOOL;
         placeData.value = tool.value === SELECT_TOOL ? null : (data ?? null);
+        placeSize.value = tool.value === SELECT_TOOL ? null : (size ?? null);
         if (tool.value !== SELECT_TOOL) place.closePalette();
     }
 
@@ -47,8 +50,15 @@ export function useTool({ workspace, registry, selection, place, snapEnabled, ed
         if (!placing.value) return null;
         const def = registry.get(tool.value);
         const fit = (v: number) => (snapEnabled.value ? Math.round(v / GRID) * GRID : Math.round(v));
-        const node = addNode(workspace.value, registry, def.id, { x: fit(world[0] - def.size.w / 2), y: fit(world[1] - def.size.h / 2), ...(placeData.value ? { data: placeData.value } : {}) });
+        const size = placeSize.value ?? def.size;
+        const node = addNode(workspace.value, registry, def.id, {
+            x: fit(world[0] - size.w / 2),
+            y: fit(world[1] - size.h / 2),
+            ...(placeSize.value ? { w: placeSize.value.w, h: placeSize.value.h } : {}),
+            ...(placeData.value ? { data: placeData.value } : {}),
+        });
         placeData.value = null;
+        placeSize.value = null;
         selection.selectOnly(node.id);
         // Текст и ему подобные сразу ждут ввода.
         if (def.inlineEdit) editingNode.value = node.id;
@@ -64,11 +74,12 @@ export function useTool({ workspace, registry, selection, place, snapEnabled, ed
         if (tool.value !== SELECT_TOOL) {
             tool.value = SELECT_TOOL;
             placeData.value = null;
+            placeSize.value = null;
         } else if (place.palette.value) place.closePalette();
         else selection.clearSelection();
     }
 
-    return { tool, placeData, placing, setTool, placeAt, cancel };
+    return { tool, placeData, placeSize, placing, setTool, placeAt, cancel };
 }
 
 export type ToolSlice = ReturnType<typeof useTool>;

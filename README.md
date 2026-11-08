@@ -29,7 +29,7 @@ npm run screenshot  # docs/media/*.png for the README, needs Chrome or Edge
 | Sticker | `N` | a coloured square with centred text; the sticker size works as a zoom: when stretched the text grows with it, and the font size number does not change. "Auto" picks the largest size at which the text fits; by hand you cannot pick a size larger than fits, and if a set size stops fitting, "Auto" turns on. The bar over it has the font size (a number; "Auto" fits it), bold and alignment (horizontal and vertical). A double click edits the text, it is dragged by any place |
 | Text | `T` | text right on the canvas, no frame; click and type at once; a double click edits; the height follows the content, an emptied text disappears; the colour from the bar tints the letters |
 | Checklist | `L` | items with a tick: `Enter` adds an item below, `Backspace` in an empty one removes it, `↑` `↓` walk the items, an item is dragged by the handle on the left (and from the keyboard: on the handle `Space` lifts, arrows move, `Space` drops, `Esc` cancels), pasting multi-line text spreads it over items (`-`, `*`, `•` and `[ ]` / `[x]` are understood); a counter and a progress line at the bottom; "Hide completed" in the bar over the node |
-| Group | `G` | a frame under the rest: nodes wholly inside it travel with it when you drag it by its strip |
+| Group | `G` | a frame under the rest: nodes wholly inside it travel with it when you drag it by its strip. The dock button opens size presets (A4, Letter, 16:9, 4:3, 1:1, phone, tablet, browser): the picked one is placed by the next click; `G` places the default size |
 | Reaction | `E` | a sticker: one emoji over the whole node, its size grows with the node; the button in the left dock opens a grid of 54 emoji, the picked one is placed by the next click, `E` places the last picked; the bar over a picked sticker has a button to change it; it lies over the other nodes and links; no colour |
 | Image | `I` | an image by its link |
 | Link | `K` | a card: the host big, the address small, a button opens it in a new tab; `example.com` becomes `https://example.com`; only `http` and `https` open; we do not fetch the page (no title, no icon), so that addresses are not sent to third-party services |
@@ -103,6 +103,7 @@ The rest of the definition is optional:
 - `bare`: no frame and no strip (text, sticker);
 - `sticker`: a colour fill with a soft shadow, yellow without a colour; `textStyle`: text settings in the bar (`size`, `bold`, `align` in the data);
 - `order`: the place in the left dock, the palette and the help (numbers with gaps: 10, 20, …);
+- `presets`: size presets, a popover on the tool button of the dock (a group: A4, 16:9…);
 - `overlay`: drawn over the other nodes and links (a sticker); `colorable: false`: cannot be coloured;
 - `inlineEdit` and `isEmpty`: editing in place and removing an empty node after it; the component gets `editing` and reports `edit-end` and `fit` (the height it needs);
 - `actions`: toggles of the node type in the bar over the selection (`get` / `set` over the data; the label in the dictionary `nodes.<type>.action.<id>`);

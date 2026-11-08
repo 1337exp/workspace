@@ -235,6 +235,7 @@ export const useEditor = defineStore('editor', () => {
         // инструмент панели слева
         tool: tool.tool,
         placeData: tool.placeData,
+        placeSize: tool.placeSize,
         placing: tool.placing,
         setTool: tool.setTool,
         cancelTool: tool.cancel,

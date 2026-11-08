@@ -25,6 +25,13 @@ export interface NodeAction<D extends NodeData = NodeData> {
  * Компонент содержимого ноды получает props `data` и `selected`
  * и сообщает об изменении событием `change` с частичным патчем данных.
  */
+/** Заготовка размера ноды. / A node size preset. */
+export interface NodePreset {
+    id: string;
+    w: number;
+    h: number;
+}
+
 export interface NodeDef<D extends NodeData = NodeData> {
     id: string;
     title: string;
@@ -68,6 +75,12 @@ export interface NodeDef<D extends NodeData = NodeData> {
      * контуром вокруг. Цвет ноды красит содержимое (`--tint`).
      */
     bare?: boolean;
+    /**
+     * Заготовки размера: у кнопки инструмента в панели слева открывается окошко с ними, выбранная ставится следующим кликом
+     * по холсту (группа: A4, 16:9, телефон…). Название берётся из `preset.<id>` в словаре.
+     * Size presets: the tool's dock button opens a popover with them, the picked one is placed by the next click on the canvas.
+     */
+    presets?: readonly NodePreset[];
     /** Рисуется цветной заливкой с тенью (стикер); цвет ноды красит заливку, без цвета заливка жёлтая. Нужен `bare`. */
     sticker?: boolean;
     /** Настройки текста в панели над нодой: размер шрифта («Авто» или число), жирный, выравнивание (`size`, `bold`, `align` в данных). */

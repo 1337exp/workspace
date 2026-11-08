@@ -8,6 +8,8 @@ import { useCommands } from '../commands';
 import { rememberEmoji } from '@/nodes/emoji';
 import { useEditor } from '../store';
 import EmojiPicker from './EmojiPicker.vue';
+import PresetPicker from './PresetPicker.vue';
+import type { NodePreset } from '@/core/types';
 
 /**
  * Панель инструментов у левого края: «Выбор», по инструменту на каждый тип ноды, затем отмена и повтор.
@@ -31,6 +33,19 @@ function pickEmoji(emoji: string) {
     emojiOpen.value = false;
 }
 
+/** Окошко заготовок размера (группа) у своей кнопки. */
+const presetOpen = ref(false);
+
+/** Тип ноды по id инструмента (`tool.place.<тип>`). */
+const typeOf = (toolId: string) => toolId.replace('tool.place.', '');
+const presetsOf = (toolId: string) => (toolId.startsWith('tool.place.') ? editor.registry.find(typeOf(toolId))?.presets : undefined);
+
+/** Выбрали заготовку: нода этого размера ставится следующим кликом по холсту. */
+function pickPreset(toolId: string, preset: NodePreset) {
+    editor.setTool(typeOf(toolId), undefined, { w: preset.w, h: preset.h });
+    presetOpen.value = false;
+}
+
 const toolIds = computed(() => ['tool.select', ...editor.registry.all().filter((d) => !d.point).map((d) => `tool.place.${d.id}`)]);
 </script>
 
@@ -51,6 +66,19 @@ const toolIds = computed(() => ['tool.select', ...editor.registry.all().filter((
                         />
                     </template>
                     <EmojiPicker @pick="pickEmoji" />
+                </TaoPopover>
+                <TaoPopover v-else-if="presetsOf(id)" v-model="presetOpen" placement="right-start">
+                    <template #trigger>
+                        <TaoButton
+                            variant="ghost"
+                            tone="neutral"
+                            :icon="cmd.icon(id)"
+                            :pressed="cmd.checked(id)"
+                            :aria-label="t('preset.pick')"
+                            :shortcut="cmd.shortcutLabel(id)"
+                        />
+                    </template>
+                    <PresetPicker :presets="presetsOf(id)!" @pick="(p) => pickPreset(id, p)" />
                 </TaoPopover>
                 <TaoButton
                     v-else
